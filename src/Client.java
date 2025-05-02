@@ -41,7 +41,8 @@ public class Client {
         }
         readerStats.close();
         
-        // Player player1 = new Player(maxHP, startingArmour, initiativeRange, name, playerClass, startCurr, experience);
+        Player player1 = new Player(maxHP, startingArmour, initiativeRange, name, playerClass, startCurr, experience);
 
+        System.out.println(player1.name + " rolled a " + player1.rollInitiative() + "!");
     }
 }
