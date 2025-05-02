@@ -1,2 +1,2 @@
-maxHP,startArmour,initRange,startCurr,experience
-15,3,10,0,0
+name,playerClass,maxHP,startArmour,initRange,startCurr,experience
+player1,knight,15,3,10,0,0
