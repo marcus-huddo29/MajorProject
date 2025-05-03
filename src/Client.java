@@ -29,20 +29,57 @@ public class Client {
             startCurr = Double.parseDouble(stats[5]);
             experience = Double.parseDouble(stats[6]);
         
-            System.out.println(name);
+             System.out.println(name);
             System.out.println(playerClass);
             System.out.println(maxHP);
             System.out.println(startingArmour);
             System.out.println(initiativeRange);
             System.out.println(startCurr);
-            System.out.println(experience);
+           System.out.println(experience);
 
             lineStats = readerStats.readLine();
         }
         readerStats.close();
         
+       
         Player player1 = new Player(maxHP, startingArmour, initiativeRange, name, playerClass, startCurr, experience);
 
         System.out.println(player1.name + " rolled a " + player1.rollInitiative() + "!");
+
+        int eHp = 0; 
+        int eArmour = 0; 
+        int eInitiative= 0;
+        double currencyDrop = 0;
+        double experienceDrop = 0;
+        String eName = ""; 
+
+        
+        BufferedReader readerEnemy = new BufferedReader(new FileReader("enemyStats.csv"));
+
+        String lineEnemy = readerEnemy.readLine();
+        lineEnemy = readerEnemy.readLine();
+
+        // parse through playerStats csv collecting the initial stats from the columns
+        while(lineEnemy != null){
+            String[] stats = lineEnemy.split(",");
+            eName = stats[0];
+            eHp = Integer.parseInt(stats[1]);
+            eArmour = Integer.parseInt(stats[2]);
+            eInitiative =Integer.parseInt(stats[3]);
+            currencyDrop = Double.parseDouble(stats[4]);
+            experienceDrop = Double.parseDouble(stats[5]);
+        
+             System.out.println(eName);
+            System.out.println(eHp);
+            System.out.println(eArmour);
+            System.out.println(eInitiative);
+            System.out.println(currencyDrop);
+           System.out.println(experienceDrop);
+
+           lineEnemy = readerEnemy.readLine();
+        }
+        readerEnemy.close();
+        Enemy enemy1 = new Enemy (eName,eHp,eArmour,eInitiative,currencyDrop,experienceDrop);
+        System.out.println(enemy1.name + " rolled a " + enemy1.rollInitiative() + "!");
     }
 }
