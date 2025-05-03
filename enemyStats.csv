@@ -1,2 +1,2 @@
-name,playerClass,maxHp,armour,currencyDrop,experience
-player1,class1,10,1,5,5
+eName,eHp,eArmour,eInitiative,currencyDrop,experienceDrop
+enemy1,15,10,10,5,5
