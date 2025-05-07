@@ -1,5 +1,6 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.util.ArrayList; //Owen
 
 public class Client {
     public static void main(String[] args) throws Exception {
@@ -41,7 +42,15 @@ public class Client {
         }
         readerStats.close();
         
-       
+        // Load abilities from abilities.csv by Owen
+        ArrayList<Ability> abilities = new AbilityLoader().loadAbilitiesFromCSV("abilities.csv");
+
+        // Print all loaded abilities by Owen
+        System.out.println("Loaded Abilities:");
+        for (Ability ability : abilities) {
+        System.out.println("- " + ability.getAbilityName() + " (Level " + ability.getLevel() + ")");
+    }
+
         Player player1 = new Player(maxHP, startingArmour, initiativeRange, name, playerClass, startCurr, experience);
 
         System.out.println(player1.name + " rolled a " + player1.rollInitiative() + "!");
