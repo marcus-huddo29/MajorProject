@@ -1,2 +1,2 @@
-name,playerClass,maxHp,armour,currencyDrop,experienceDrop
-player1,class1,10,1,5,5
+name,maxHp,armour,initiative,currencyDrop,experienceDrop
+Thief,8,3,10,5,5
