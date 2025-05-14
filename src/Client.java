@@ -7,11 +7,47 @@ import java.util.Scanner;
 
 
 public class Client {
+    // Create a Scanner object that will read what the user types in 
+    private static Scanner scanner = new Scanner(System.in); 
 
     public static void playerCombatSequence(ArrayList<Ability> abilities){
-        // Create a Scanner object that will read what the user types in
-        Scanner scanner = new Scanner(System.in);  
+        //int enemyToBeAttacked = 0;
 
+        while(true){
+            //print out the attack options for the player based on their current ability selection
+            System.out.println("Choose your ability:");
+            System.out.println("1 - " + abilities.get(0).getAbilityName() + " (Level " + abilities.get(0).getLevel() + ")");
+            System.out.println("2 - " + abilities.get(1).getAbilityName() + " (Level " + abilities.get(0).getLevel() + ")");
+            System.out.println("3 - " + abilities.get(2).getAbilityName() + " (Level " + abilities.get(0).getLevel() + ")");
+
+            System.out.print("Enter the number corresponding to your chosen attack: ");
+            
+            //choice tree for player's abilities 
+            if (scanner.hasNextInt()) {
+                int choice = scanner.nextInt();  // Read user input as integer
+                scanner.nextLine();
+
+                if (choice >= 1 && choice <= 3) {
+                    System.out.println("You cast " + abilities.get(choice - 1).getAbilityName() + "!");
+                    
+                    // TODO: make enemy take damage when attack happens - structure will be something along these lines:
+                    // stageEnemies.get(enemyToBeAttacked).takeDamage(abilities.get(choice - 1).damage());
+                    break;
+                } else {
+                    System.out.println("Invalid choice. Please select 1, 2 or 3.");
+                } 
+            } else {
+                System.out.println("Invalid choice.");
+                scanner.nextLine();
+            } 
+        }
+
+        // scanner.close();  // Close the scanner
+    }
+
+    public static void enemyCombatSequence(ArrayList<Ability> abilities){
+        // STILL IN PROGRESS. NOT WORKING YET
+        
         System.out.println("Choose your ability:");
         System.out.println("1 - " + abilities.get(0).getAbilityName());
         System.out.println("2 - " + abilities.get(1).getAbilityName());
@@ -32,8 +68,6 @@ public class Client {
         } else {
             System.out.println("Invalid choice.");
         }
-
-        scanner.close();  // Close the scanner
     }
 
     public static Enemy generateEnemies(){
@@ -43,7 +77,7 @@ public class Client {
         double currencyDrop = 0;
         double experienceDrop = 0;
         String eName = ""; 
-        
+
         try {
             BufferedReader readerEnemy = new BufferedReader(new FileReader("enemyStats.csv"));
 
@@ -138,22 +172,41 @@ public class Client {
         Player player1 = new Player(maxHP, startingArmour, initiativeRange, name, playerClass, startCurr, experience);
 
         Enemy enemy1 = generateEnemies();
+        Scanner scanner = new Scanner(System.in);  
 
-        // roll for initiative and begin combat
-        int playerInit = player1.rollInitiative();
-        int enemy1Init = enemy1.rollInitiative();
 
-        System.out.println(player1.name + " rolled a " + playerInit + ".");
-        System.out.println(enemy1.name + " rolled a " + enemy1Init + ".");
+        // Text input to confirm player is ready to begin.
+        while(true){
+            System.out.println("Type 'start' to begin combat:");
+            String input = scanner.nextLine();  // Read user input as string
 
-        if(playerInit >= enemy1Init){
-            System.out.println(player1.name + " was prepared, they attack first!");
-            playerCombatSequence(abilities);
-        } else {
-            System.out.println(player1.name + " was caught by surprise, " + enemy1.name + " attacks first!");
-            //enemyCombatSequence()
+            if (input.equalsIgnoreCase("start")) {
+                System.out.println("Let's begin.");
+                break;
+            } else { // if start is not received, loop back and let the player try again
+                System.out.println("Invalid entry. Try again.");
+            }
         }
 
+        
+        // roll for initiative and begin combat
+            int playerInit = player1.rollInitiative();
+            int enemy1Init = enemy1.rollInitiative();
+
+            System.out.println(player1.name + " rolled a " + playerInit + ".");
+            System.out.println(enemy1.name + " rolled a " + enemy1Init + ".");
+
+        while(enemy1.healthPoints > 0 || player1.health > 0){
+            if(playerInit >= enemy1Init){
+                System.out.println(player1.name + " was prepared, they attack first!");
+                playerCombatSequence(abilities);
+            } else {
+                System.out.println(player1.name + " was caught by surprise, " + enemy1.name + " attacks first!");
+                System.out.println("**ENEMY ATTACK GOES HERE**");
+                //enemyCombatSequence()
+                
+            }
+        }
         
         
     }
