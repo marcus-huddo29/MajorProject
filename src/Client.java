@@ -8,6 +8,15 @@ import java.util.Scanner;
 
 public class Client {
      
+    public static void delay(int milliseconds) {
+        try {
+            Thread.sleep(milliseconds);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // Restore the interrupted status
+            System.err.println("Delay was interrupted!");
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         
         int maxHP = 0; 
@@ -75,9 +84,11 @@ public class Client {
                 System.out.println("Invalid entry. Try again.");
             }
         }
-
+        // delay for easier legibility
+        delay(1000);
+        //commence combat sequence with the player and the enemy
         combat.combatSequenceInit(player1, enemy1, abilities);
         
-        
-    }
+   }
+
 }
