@@ -40,7 +40,7 @@ public static void printHealthBarStatus(int currentHealth, int maxHealth) {
     for (int i = 0; i < emptyBars; i++) {
         bar.append("-");
     }
-    // print out the new health bar
+    // print out the new health bar 
     System.out.println(bar.toString());
 }
 
@@ -54,7 +54,7 @@ public static void printHealthBarStatus(int currentHealth, int maxHealth) {
             System.out.println("1 - " + abilities.get(0).getAbilityName() + " (Level " + abilities.get(0).getLevel() + ")");
             System.out.println("2 - " + abilities.get(1).getAbilityName() + " (Level " + abilities.get(0).getLevel() + ")");
             System.out.println("3 - " + abilities.get(2).getAbilityName() + " (Level " + abilities.get(0).getLevel() + ")");
-            System.out.println("======================================");
+            System.out.println("======================================" );
             System.out.print("Enter the number corresponding to your chosen attack: ");
             
             //choice tree for player's abilities 
@@ -72,6 +72,7 @@ public static void printHealthBarStatus(int currentHealth, int maxHealth) {
                     // subtract enemy health from the damage dealt.
                     enemy.healthPoints -= damage;
                     System.out.println("You dealt " + damage + " damage to " + enemy.name + "!");
+                    System.out.println(enemy.name +"'s health: "+ enemy.healthPoints );
                     delay(1500);
                     break;
 
@@ -102,83 +103,41 @@ public static void printHealthBarStatus(int currentHealth, int maxHealth) {
         return player1.health;
         
     }
+   
 
-    public static Enemy generateEnemies(){
-        int eHp = 0; 
-        int eArmour = 0; 
-        int eInitiative= 0;
-        double currencyDrop = 0;
-        double experienceDrop = 0;
-        String eName = ""; 
+   
 
-        try {
-            BufferedReader readerEnemy = new BufferedReader(new FileReader("enemyStats.csv"));
 
-            String lineEnemy = readerEnemy.readLine();
-            lineEnemy = readerEnemy.readLine();
+   public static void combatSequenceInit(Player plyr, Enemy enmy, ArrayList<Ability> ablty) {
+    int playerInit = plyr.rollInitiative();
+    int enemyInit = enmy.rollInitiative();
 
-            // parse through playerStats csv collecting the initial stats from the columns
-            while(lineEnemy != null){
-                String[] stats = lineEnemy.split(",");
-                eName = stats[0];
-                eHp = Integer.parseInt(stats[1]);
-                eArmour = Integer.parseInt(stats[2]);
-                eInitiative =Integer.parseInt(stats[3]);
-                currencyDrop = Double.parseDouble(stats[4]);
-                experienceDrop = Double.parseDouble(stats[5]);
+    System.out.println(plyr.name + " rolled a " + playerInit + ".");
+    delay(500);
+    System.out.println(enmy.name + " rolled a " + enemyInit + ".");
+    delay(500);
 
-                // test prints to confirm csv read
-                // System.out.println(eName);
-                // System.out.println(eHp);
-                // System.out.println(eArmour);
-                // System.out.println(eInitiative);
-                // System.out.println(currencyDrop);
-                // System.out.println(experienceDrop);
-
-            lineEnemy = readerEnemy.readLine();
+    while(enmy.healthPoints > 0 && plyr.health > 0) {
+        if(playerInit >= enemyInit) {
+            if(playerInit < 10) {
+                System.out.println(plyr.name + " was prepared, they attack first!");
             }
-            readerEnemy.close();
-
-        } catch (FileNotFoundException err) {
-            System.out.println("The file 'enemyStats.csv' was not found.");
-            err.printStackTrace();
-        } catch (IOException err) {
-            System.out.println("An error occurred while reading the file.");
-            err.printStackTrace();
-        }
-
-        Enemy generatedEnemy = new Enemy (eName,eHp,eArmour,eInitiative,currencyDrop,experienceDrop);
-
-        return generatedEnemy;
-    }
-
-
-    public static void combatSequenceInit(Player plyr, Enemy enmy, ArrayList<Ability> ablty){
-        // roll for initiative and begin combat
-            int playerInit = plyr.rollInitiative();
-            int enemy1Init = enmy.rollInitiative();
-
-            System.out.println(plyr.name + " rolled a " + playerInit + ".");
-            delay(500);
-            System.out.println(enmy.name + " rolled a " + enemy1Init + ".");
-            delay(500);
-
-        while(enmy.healthPoints > 0 || plyr.health > 0){
-            if(playerInit >= enemy1Init){
-                if(playerInit < 10){
-                    System.out.println(plyr.name + " was prepared, they attack first!");
-                }
-                enmy.healthPoints = combat.playerCombatSequence(ablty, enmy, plyr);
-                enemy1Init += 100;
-            } else {
-                if(enemy1Init < 10){
-                    System.out.println(plyr.name + " was caught by surprise, " + enmy.name + " attacks first!");
-                }
-                
-                plyr.health = combat.enemyCombatSequence(ablty, plyr);
-                playerInit += 100;
-                
+            enmy.healthPoints = combat.playerCombatSequence(ablty, enmy, plyr);
+            enemyInit += 100;
+            
+            // Check if enemy was defeated
+            if(enmy.healthPoints <= 0) break;
+        } else {
+            if(enemyInit < 10) {
+                System.out.println(plyr.name + " was caught by surprise, " + enmy.name + " attacks first!");
             }
+            
+            plyr.health = combat.enemyCombatSequence(ablty, plyr);
+            playerInit += 100;
+            
+            // Check if player was defeated
+            if(plyr.health <= 0) break;
         }
     }
+}
 }

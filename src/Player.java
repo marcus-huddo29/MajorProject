@@ -21,6 +21,9 @@ public class Player {
         Integer initiative = rand.nextInt(this.initiativeRange);
         return initiative;
     }
+    public void resetHealth() {
+    this.health = health; // assuming maxHP is stored
+}
     
     public String toString() {
         return "Player(" + name + ", " + playerClass + ")";

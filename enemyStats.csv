@@ -1,2 +1,6 @@
 name,maxHp,armour,initiative,currencyDrop,experienceDrop
 Thief,20,3,10,5,5
+Goblin,18,2,8,4,4
+Orc Brute,35,6,6,10,8
+Shadow Mage,22,3,12,7,9
+Skeleton Knight,28,5,7,6,6

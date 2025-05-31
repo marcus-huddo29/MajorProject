@@ -45,13 +45,21 @@ public class Client {
             experience = Double.parseDouble(stats[6]);
         
             // test prints to confirm csv read
-            // System.out.println(name);
-            // System.out.println(playerClass);
-            // System.out.println(maxHP);
-            // System.out.println(startingArmour);
-            // System.out.println(initiativeRange);
-            // System.out.println(startCurr);
-            // System.out.println(experience);
+           
+            System.out.println("Name:"+name);
+             delay(100);
+            System.out.println("class:"+playerClass);
+             delay(100);
+            System.out.println("health:"+maxHP);
+             delay(100);
+            System.out.println("starting:"+startingArmour);
+             delay(100);
+            System.out.println("initiativeRange:"+initiativeRange);
+             delay(100);
+            System.out.println("startCurr:"+startCurr);
+             delay(100);
+            System.out.println("experience:"+experience);
+             delay(100);
 
             lineStats = readerStats.readLine();
         }
@@ -65,11 +73,12 @@ public class Client {
         for (Ability ability : abilities) {
             System.out.println("- " + ability.getAbilityName() + " (Level " + ability.getLevel() + ")");
         }
-
-        Player player1 = new Player(maxHP, startingArmour, initiativeRange, name, playerClass, startCurr, experience);
-
-        Enemy enemy1 = combat.generateEnemies();
-        Scanner scanner = new Scanner(System.in);  
+        int stageNumber=1;
+       while(true){
+            Player player1 = new Player(maxHP, startingArmour, initiativeRange, name, playerClass, startCurr, experience);
+            
+            Enemy enemy1 = Enemy.generateEnemies();
+            Scanner scanner = new Scanner(System.in);  
 
 
         // Text input to confirm player is ready to begin.
@@ -84,11 +93,46 @@ public class Client {
                 System.out.println("Invalid entry. Try again.");
             }
         }
+       
+        Stage stage1= new Stage(stageNumber, player1, enemy1);
+        stage1.startStage();
         // delay for easier legibility
         delay(1000);
         //commence combat sequence with the player and the enemy
         combat.combatSequenceInit(player1, enemy1, abilities);
-        
+       if (stage1.isStageOver()) {
+          //  isStageCleared = true;
+          if(enemy1.healthPoints<=0){
+            System.out.println("Stage " + stageNumber + " cleared!");
+            player1.resetHealth(); // Ensure resetHealth() is implemented
+
+        System.out.print("Press Enter to continue to the next stage...");
+        while (!scanner.nextLine().isEmpty()) {
+            System.out.print("Invalid input. Just press Enter to continue: ");
+        }
+
+        stageNumber++;
+
+    } else if (player1.health <= 0) {
+            System.out.println(player1.name + " has been defeated...");
+            String input="";
+            while(true){
+                 System.out.print("Do you want to restart the game? (yes/no): ");
+            input = scanner.nextLine().trim().toLowerCase();
+            if (input.equals("yes")) {
+                break; // Exit inner loop to restart game
+            } else if (input.equals("no")) {
+                System.out.println("Thanks for playing!");
+                System.exit(0);
+            } else {
+                System.out.println("Invalid input. Please type 'yes' or 'no'.");
+            }
+            }
+            break;
+        }
+    }
+       }
    }
 
-}
+
+}       
