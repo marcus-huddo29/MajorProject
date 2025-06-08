@@ -1,143 +1,251 @@
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
-public class combat {
+public class Combat {
 
-    // Create a Scanner object that will read what the user types in 
-    private static Scanner scanner = new Scanner(System.in);
+    private static final Scanner scanner = new Scanner(System.in);
 
     public static void delay(int milliseconds) {
-        // function to implement a delay on print statements to improve readability
-        
-        //implemented through a try catch as to be considerate of interrupts
         try {
-            // sleep module uses value in miliseconds to delay program.
             Thread.sleep(milliseconds);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            System.err.println("delay interrupt");
+            System.err.println("Delay was interrupted!");
         }
-}
-
-public static void printHealthBarStatus(int currentHealth, int maxHealth) {
-
-    // establish maximum health and how much health the player has currently
-    int filledBars = (int) ((double) currentHealth / maxHealth * maxHealth);
-    // how much health has the player lost
-    int emptyBars = maxHealth - filledBars;
-
-    StringBuilder bar = new StringBuilder();
-    // build a string statement by appending the number of health points 
-    // with the number of empty health points
-    bar.append("HP: ");
-    for (int i = 0; i < filledBars; i++){
-        bar.append("█");
     }
-    for (int i = 0; i < emptyBars; i++) {
-        bar.append("-");
+
+    public static void printHealthBarStatus(int currentHealth, int maxHealth) {
+        double fraction = (double) currentHealth / maxHealth;
+        int barLength = 20;
+        int filledBars = (int) (fraction * barLength);
+        if (filledBars < 0) filledBars = 0;
+        if (filledBars > barLength) filledBars = barLength;
+        int emptyBars = barLength - filledBars;
+
+        StringBuilder bar = new StringBuilder();
+        bar.append("HP: ");
+        for (int i = 0; i < filledBars; i++) bar.append("█");
+        for (int i = 0; i < emptyBars; i++) bar.append("-");
+        System.out.println(bar.toString());
     }
-    // print out the new health bar 
-    System.out.println(bar.toString());
-}
 
-    public static int playerCombatSequence(ArrayList<Ability> abilities, Enemy enemy, Player player1){
+    public static void printManaBarStatus(int currentMp, int maxMp) {
+        double fraction = (double) currentMp / maxMp;
+        int barLength = 20;
+        int filledBars = (int) (fraction * barLength);
+        if (filledBars < 0) filledBars = 0;
+        if (filledBars > barLength) filledBars = barLength;
+        int emptyBars = barLength - filledBars;
 
-        while(true){
-            //print out the attack options for the player based on their current ability selection
+        StringBuilder bar = new StringBuilder();
+        bar.append("MP: ");
+        for (int i = 0; i < filledBars; i++) bar.append("█");
+        for (int i = 0; i < emptyBars; i++) bar.append("-");
+        System.out.println(bar.toString());
+    }
+
+    public static int playerCombatSequence(ArrayList<Ability> abilities, Enemy enemy, Player player1) {
+        while (true) {
             System.out.println("======================================");
-            printHealthBarStatus(player1.health, 30);;// function to print out a progressive health bar
+            printHealthBarStatus(player1.getHealthPoints(), player1.getMaxHealth());
+            System.out.println("HP: " + player1.getHealthPoints() + "/" + player1.getMaxHealth());
+            if (player1.getMaxMp() > 0) {
+                printManaBarStatus(player1.getMp(), player1.getMaxMp());
+                System.out.println("MP: " + player1.getMp() + "/" + player1.getMaxMp());
+            }
+            System.out.println();
             System.out.println("Choose your ability:");
-            System.out.println("1 - " + abilities.get(0).getAbilityName() + " (Level " + abilities.get(0).getLevel() + ")");
-            System.out.println("2 - " + abilities.get(1).getAbilityName() + " (Level " + abilities.get(0).getLevel() + ")");
-            System.out.println("3 - " + abilities.get(2).getAbilityName() + " (Level " + abilities.get(0).getLevel() + ")");
-            System.out.println("======================================" );
-            System.out.print("Enter the number corresponding to your chosen attack: ");
-            
-            //choice tree for player's abilities 
-            if (scanner.hasNextInt()) {
-                int choice = scanner.nextInt();  // Read user input as integer
-                scanner.nextLine();
-
-                // checks that choice is within the valid options
-                if (choice >= 1 && choice <= 3) {
-
-                    System.out.println("You cast " + abilities.get(choice - 1).getAbilityName() + "!");
-                    delay(1000);
-                    // calculate the damage of the chosen ability. index is from 0 so -1 to the choice.
-                    int damage = abilities.get(choice - 1).getRandomDamage();
-                    // subtract enemy health from the damage dealt.
-                    enemy.healthPoints -= damage;
-                    System.out.println("You dealt " + damage + " damage to " + enemy.name + "!");
-                    System.out.println(enemy.name +"'s health: "+ enemy.healthPoints );
-                    delay(1500);
-                    break;
-
+            for (int i = 0; i < abilities.size(); i++) {
+                Ability a = abilities.get(i);
+                String line;
+                if (a.getMinDamage() == 0 && a.getMaxDamage() == 0) {
+                    // Special non-damage abilities (e.g., Guard Stance)
+                    line = String.format("%d - %s (Level %d) – %s",
+                        i+1,
+                        a.getAbilityName(),
+                        a.getLevel(),
+                        "Block incoming damage");
                 } else {
-                    System.out.println("Invalid choice. Please select 1, 2 or 3.");
-                } 
-            } else {
-                System.out.println("Invalid choice.");
+                    line = String.format("%d - %s (Level %d)",
+                        i+1,
+                        a.getAbilityName(),
+                        a.getLevel());
+                }
+                // append AoE note for Volley
+                if (a.getAbilityName().equals("Volley")) {
+                    line += " [AoE: hits all enemies]";
+                }
+                // append cooldown if any
+                if (!a.isReady()) {
+                    line += " [CD:" + a.getCurrentCooldown() + "]";
+                }
+                // existing MP cost append logic...
+                if (player1.getMaxMp() > 0) {
+                    int displayCost = a.getAbilityName().equals("Wand Bonk")
+                                      ? 0
+                                      : a.getMinDamage();
+                    line += " [MP:" + displayCost + "]";
+                }
+                System.out.println(line);
+            }
+            System.out.println("======================================");
+            System.out.print("Enter a number between 1 and " + abilities.size() + ": ");
+
+            if (scanner.hasNextInt()) {
+                int choice = scanner.nextInt();
                 scanner.nextLine();
-            } 
-        }
-        //return enemy health after combat for the next turn
-        return enemy.healthPoints;
-    }
-
-    public static int enemyCombatSequence(ArrayList<Ability> abilities, Player player1){
-
-
-        System.out.println("The enemy makes their move: ");
-        delay(1000);
-        int randomEnemyChoice = (int)(Math.random() * 2);;
-
-        int damage = abilities.get(randomEnemyChoice).getRandomDamage();
-
-        player1.health -= damage;
-        System.out.println("The enemy used " + abilities.get(randomEnemyChoice).getAbilityName() + " to deal " + damage + " damage to " + player1.name + "!");
-        delay(1500);
-        return player1.health;
-        
-    }
-   
-
-   
-
-
-   public static void combatSequenceInit(Player plyr, Enemy enmy, ArrayList<Ability> ablty) {
-    int playerInit = plyr.rollInitiative();
-    int enemyInit = enmy.rollInitiative();
-
-    System.out.println(plyr.name + " rolled a " + playerInit + ".");
-    delay(500);
-    System.out.println(enmy.name + " rolled a " + enemyInit + ".");
-    delay(500);
-
-    while(enmy.healthPoints > 0 && plyr.health > 0) {
-        if(playerInit >= enemyInit) {
-            if(playerInit < 10) {
-                System.out.println(plyr.name + " was prepared, they attack first!");
+                if (choice >= 1 && choice <= abilities.size()) {
+                    Ability chosen = abilities.get(choice - 1);
+                    // Allow using ability if ready OR player has cooldown buff
+                    if (chosen.isReady() || player1.hasCooldownBuff()) {
+                        // Check MP availability (do not subtract yet)
+                        if (player1.getMaxMp() > 0) {
+                            int cost = chosen.getAbilityName().equals("Wand Bonk") 
+                                       ? 0 
+                                       : chosen.getMinDamage();
+                            if (player1.getMp() < cost) {
+                                System.out.println("> Not enough MP to cast " 
+                                    + chosen.getAbilityName() + " (requires " + cost + ").");
+                                continue;
+                            }
+                        }
+                        System.out.println("You cast " + chosen.getAbilityName() + "!");
+                        delay(500);
+                        int base = chosen.getRandomDamage();
+                        int extra = player1.getExtraDamage();
+                        int damage = base + extra;
+                        enemy.takeDamage(damage);
+                        System.out.println("You dealt " + base + " + " + extra + " = " + damage + " damage to " + enemy.getName() + "!");
+                        System.out.println(enemy.getName() + " HP: " + enemy.getHealthPoints());
+                        chosen.use();
+                        // Shield Bash: 50% chance to stun enemy
+                        if (chosen.getAbilityName().equals("Shield Bash")) {
+                            if (Math.random() < 0.5) {
+                                System.out.println("> " + enemy.getName() + " is stunned!");
+                                enemy.setStunned(true);
+                            }
+                        } else if (chosen.getAbilityName().equals("Guard Stance")) {
+                            System.out.println("> " + player1.getName() + " braces for incoming attacks!");
+                            player1.setGuardRounds(1);
+                        }
+                        // Now subtract MP cost
+                        if (player1.getMaxMp() > 0) {
+                            int cost = chosen.getAbilityName().equals("Wand Bonk") 
+                                       ? 0 
+                                       : chosen.getMinDamage();
+                            player1.reduceMp(cost);
+                        }
+                        // consume one round of cooldown immunity if active
+                        if (player1.hasCooldownBuff()) {
+                            player1.decrementCooldownBuff();
+                        }
+                        delay(500);
+                        return enemy.getHealthPoints();
+                    } else {
+                        System.out.println("> That ability is on cooldown (" + chosen.getCurrentCooldown() + ").");
+                    }
+                } else {
+                    System.out.println("> Invalid choice. Try again.");
+                }
+            } else {
+                System.out.println("> Please enter a number.");
+                scanner.nextLine();
             }
-            enmy.healthPoints = combat.playerCombatSequence(ablty, enmy, plyr);
-            enemyInit += 100;
-            
-            // Check if enemy was defeated
-            if(enmy.healthPoints <= 0) break;
+        }
+    }
+
+    public static int enemyCombatSequence(ArrayList<Ability> abilities, Player player1, Enemy enemy) {
+        int randomIndex = (int) (Math.random() * abilities.size());
+        Ability chosen = abilities.get(randomIndex);
+        if (chosen.isReady()) {
+            int baseDamage = chosen.getRandomDamage();
+            double mult = DifficultyManager.getDifficulty().getEnemyDamageMultiplier();
+            int damage = (int) Math.round(baseDamage * mult);
+            player1.takeDamage(damage);
+            System.out.println(enemy.getName() + " used " + chosen.getAbilityName() +
+                               " and dealt " + damage + " damage to " + player1.getName() + "!");
+            chosen.use();
         } else {
-            if(enemyInit < 10) {
-                System.out.println(plyr.name + " was caught by surprise, " + enmy.name + " attacks first!");
+            System.out.println("> Enemy's " + chosen.getAbilityName() +
+                               " is on cooldown (" + chosen.getCurrentCooldown() + ").");
+        }
+        delay(500);
+        return player1.getHealthPoints();
+    }
+
+    // Enforces initiative-first output and delays before retaliation
+    public static void combatSequenceInit(Player plyr, ArrayList<Enemy> enemies, ArrayList<Ability> plyrAbilities) {
+        Difficulty diff = DifficultyManager.getDifficulty();
+
+        // Loop through each enemy in the stage
+        for (int idx = 0; idx < enemies.size(); idx++) {
+            Enemy enmy = enemies.get(idx);
+            int roundCounter = 0;
+
+            // Fight until either the player or this enemy dies
+            while (plyr.getHealthPoints() > 0 && enmy.getHealthPoints() > 0) {
+                // ——— Print round separator ———
+                roundCounter++;
+                System.out.println();
+                System.out.println("=== Round " + roundCounter + " ===");
+                System.out.println();
+
+                // ——— 1) ROLL INITIATIVE FOR ALL PARTICIPANTS ———
+                // Player and all alive enemies roll for initiative
+                java.util.Map<String, Integer> initMap = new java.util.LinkedHashMap<>();
+                initMap.put(plyr.getName(), plyr.rollInitiative());
+                for (Enemy en : enemies) {
+                    if (en.getHealthPoints() > 0) {
+                        initMap.put(en.getName(), en.rollInitiative());
+                    }
+                }
+                // Sort participants by roll descending
+                List<String> turnOrder = initMap.entrySet().stream()
+                    .sorted((e1, e2) -> e2.getValue() - e1.getValue())
+                    .map(Map.Entry::getKey)
+                    .toList();
+                System.out.print("> Turn order: ");
+                System.out.println(String.join(" -> ", turnOrder));
+                // Execute each in order
+                for (String actor : turnOrder) {
+                    if (plyr.getHealthPoints() <= 0 || enmy.getHealthPoints() <= 0) break;
+                    if (actor.equals(plyr.getName())) {
+                        // Player's turn
+                        int remainingEnemyHP = playerCombatSequence(plyrAbilities, enmy, plyr);
+                        for (Ability a : plyrAbilities) {
+                            a.tickCooldown();
+                        }
+                        if (remainingEnemyHP <= 0) {
+                            // Enemy died; exit this round
+                            break;
+                        }
+                    } else if (actor.equals(enmy.getName()) && enmy.getHealthPoints() > 0) {
+                        // Enemy's turn
+                        ArrayList<Ability> dummyAbilities = new ArrayList<>();
+                        dummyAbilities.add(new Ability("Enemy Strike", 2, 5, 1.0, "", 1));
+                        dummyAbilities.add(new Ability("Enemy Blast", 3, 7, 2.0, "", 2));
+                        dummyAbilities.add(new Ability("Enemy Bite", 1, 4, 0.5, "", 0));
+                        int remainingPlayerHP = enemyCombatSequence(dummyAbilities, plyr, enmy);
+                        if (remainingPlayerHP <= 0) {
+                            break;
+                        }
+                    }
+                }
+
+                // After all moves, insert a blank line, then print the player’s health bar and HP, then a blank line
+                System.out.println();
+                printHealthBarStatus(plyr.getHealthPoints(), plyr.getMaxHealth());
+                System.out.printf("HP: %d/%d%n%n", plyr.getHealthPoints(), plyr.getMaxHealth());
+
+            } // end while: one enemy’s fight
+
+            // Check if player died; if so, print here and exit. Otherwise, return to Client for defeat message.
+            if (plyr.getHealthPoints() <= 0) {
+                System.out.println(plyr.getName() + " has been defeated...");
+                return;
             }
-            
-            plyr.health = combat.enemyCombatSequence(ablty, plyr);
-            playerInit += 100;
-            
-            // Check if player was defeated
-            if(plyr.health <= 0) break;
         }
     }
-}
 }

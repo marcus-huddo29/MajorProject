@@ -1,13 +1,13 @@
 public class Ability {
 
-    private String abilityName;
+    private final String abilityName;
     private int minDamage;
     private int maxDamage;
     private double experience;
     private double experienceRequired;
     private int level;
-    private String statusInflicted;
-    private int cooldown;
+    private final String statusInflicted;
+    private final int cooldown;
     private int currentCooldown;
 
     //Constructor
@@ -49,10 +49,17 @@ public class Ability {
     }
 
     public void use() {
-        if (isReady()) {
-            currentCooldown = cooldown;
-        } else {
+        if (!isReady()) {
             System.out.println(abilityName + " is still on cooldown for " + currentCooldown + " more turns.");
+            return;
+        }
+        // Calculate base cooldown scaled by ability “power” (higher maxDamage → longer CD)
+        int powerScale = Math.max(1, maxDamage / Math.max(1, minDamage));
+        int baseCd = cooldown * powerScale;
+        if (DifficultyManager.getDifficulty().useLongerCooldown()) {
+            currentCooldown = baseCd * 2;
+        } else {
+            currentCooldown = baseCd;
         }
     }
 
@@ -60,6 +67,11 @@ public class Ability {
         if (currentCooldown > 0) {
             currentCooldown--;
         }
+    }
+
+    // Reset cooldown to 0 (used when starting a new stage)
+    public void resetCooldown() {
+        this.currentCooldown = 0;
     }
 
     public String getAbilityName() {
@@ -96,5 +108,11 @@ public class Ability {
 
     public int getCurrentCooldown() {
         return currentCooldown;
+    }
+
+    // Increase both min and max damage
+    public void buffDamage(int amount) {
+        this.minDamage += amount;
+        this.maxDamage += amount;
     }
 }

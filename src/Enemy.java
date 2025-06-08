@@ -1,84 +1,87 @@
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
 
 public class Enemy {
-String name;
-int healthPoints, armour, initiative;
-double currencyDrop, experienceDrop;
-Ability attack1;
-public Enemy(String name,int healthPoints, int armour,int initiative,double currencyDrop, double experienceDrop ){
-    this.name = name;
-    this.healthPoints= healthPoints;
-    this.armour=armour;
-    this. currencyDrop=currencyDrop;
-    this.experienceDrop=experienceDrop;
-    this.initiative=initiative;
-    
-}
- public int rollInitiative() {
-        Random rand = new Random();
-        int roll = rand.nextInt(this.initiative);
-        return roll;
+
+    private final String name;
+    private int healthPoints;
+    private final int armour;
+    private final int initiative;
+    private final int attackDistance;
+    public double currencyDrop;
+    public double experienceDrop;
+    private boolean stunned = false;
+
+    public boolean isStunned() { return stunned; }
+    public void setStunned(boolean s) { stunned = s; }
+
+    public Enemy(String name, int healthPoints, int armour, int initiative,
+                 int attackDistance, double currencyDrop, double experienceDrop) {
+        this.name = name;
+        this.healthPoints = healthPoints;
+        this.armour = armour;
+        this.initiative = initiative;
+        this.attackDistance = attackDistance;
+        this.currencyDrop = currencyDrop;
+        this.experienceDrop = experienceDrop;
     }
-    
-    public String toString() {
-        return "Enemy(" + name + ")";
+
+    public String getName() {
+        return this.name;
     }
-     public static Enemy generateEnemies(){
-    ArrayList<Enemy> enemyList = new ArrayList<>();
-        int eHp = 0; 
-        int eArmour = 0; 
-        int eInitiative= 0;
-        double currencyDrop = 0;
-        double experienceDrop = 0;
-        String eName = ""; 
 
-        try {
-            BufferedReader readerEnemy = new BufferedReader(new FileReader("enemyStats.csv"));
+    public int getArmour() {
+        return this.armour;
+    }
 
-            String lineEnemy = readerEnemy.readLine();
-            lineEnemy = readerEnemy.readLine();
+    public int getInitiative() {
+        return this.initiative;
+    }
 
-            // parse through playerStats csv collecting the initial stats from the columns
-            while(lineEnemy != null){
-                String[] stats = lineEnemy.split(",");
-                eName = stats[0];
-                eHp = Integer.parseInt(stats[1]);
-                eArmour = Integer.parseInt(stats[2]);
-                eInitiative =Integer.parseInt(stats[3]);
-                currencyDrop = Double.parseDouble(stats[4]);
-                experienceDrop = Double.parseDouble(stats[5]);
-               
-                // test prints to confirm csv read
-                // System.out.println(eName);
-                // delay(100);
-                // System.out.println("Enemy's health:"+eHp);
-                // delay(100);
-                // System.out.println("Enemy's armour:"+eArmour);
-                // delay(100);
-                // System.out.println("Enemy's initiative:"+eInitiative);
-                // delay(100);
-                
-            lineEnemy = readerEnemy.readLine();
-            enemyList.add(new Enemy(eName, eHp, eArmour, eInitiative, currencyDrop, experienceDrop));
+    public int getHealthPoints() {
+        return this.healthPoints;
+    }
+
+    public void takeDamage(int amount) {
+        this.healthPoints -= amount;
+        if (this.healthPoints < 0) this.healthPoints = 0;
+    }
+
+    public int getRandomAttackDamage() {
+        return 1 + new Random().nextInt(initiative);
+    }
+
+    public int rollInitiative() {
+        return 1 + new Random().nextInt(initiative);
+    }
+
+    public int getAttackDistance() {
+        return this.attackDistance;
+    }
+
+    public static ArrayList<Enemy> generateEnemies() {
+        ArrayList<Enemy> enemyList = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader("enemyStats.csv"))) {
+            String line = reader.readLine(); // skip header
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                String eName = parts[0];
+                int eHp = Integer.parseInt(parts[1]);
+                int eArmour = Integer.parseInt(parts[2]);
+                int eInitiative = Integer.parseInt(parts[3]);
+                int eDistance = Integer.parseInt(parts[4]);
+                double eCurr = Double.parseDouble(parts[5]);
+                double eExp = Double.parseDouble(parts[6]);
+
+                enemyList.add(new Enemy(eName, eHp, eArmour, eInitiative, eDistance, eCurr, eExp));
             }
-            readerEnemy.close();
-
-        } catch (FileNotFoundException err) {
-            System.out.println("The file 'enemyStats.csv' was not found.");
-            err.printStackTrace();
-        } catch (IOException err) {
-            System.out.println("An error occurred while reading the file.");
-            err.printStackTrace();
+        } catch (IOException ex) {
+            System.err.println("Error loading enemyStats.csv: " + ex.getMessage());
+            ex.printStackTrace();
         }
-
-       int randomIndex = (int) (Math.random() * enemyList.size());
-        return enemyList.get(randomIndex);
-        
+        return enemyList;
     }
-  
 }

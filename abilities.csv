@@ -2,3 +2,4 @@ abilityName,minDamage,maxDamage,experienceRequired,statusInflicted,cooldown
 Fireball,5,10,30,Burning,2
 Slash,7,12,20,None,0
 PoisonBite,4,8,25,Poisoned,1
+Wand Bonk,1,3,0,None,0
