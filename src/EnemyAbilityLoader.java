@@ -1,3 +1,5 @@
+// EnemyAbilityLoader.java
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -12,10 +14,10 @@ public class EnemyAbilityLoader {
 
     public static void loadEnemyAbilities(String filename) {
         try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
-            br.readLine(); // Skip header
+            br.readLine(); 
             String line;
             while ((line = br.readLine()) != null) {
-                String[] parts = line.split(",", 2); // Split only into name and the rest
+                String[] parts = line.split(",", 2); 
                 if (parts.length < 2) continue;
                 String enemyName = parts[0].trim();
                 List<String> abilities = new ArrayList<>(Arrays.asList(parts[1].split(",")));
@@ -29,7 +31,7 @@ public class EnemyAbilityLoader {
 
     public static ArrayList<Ability> getAbilitiesForEnemy(String enemyName) {
         ArrayList<Ability> abilities = new ArrayList<>();
-        List<String> abilityNames = enemyAbilityMap.getOrDefault(enemyName, List.of("Basic Strike")); // Default to Basic Strike if not found
+        List<String> abilityNames = enemyAbilityMap.getOrDefault(enemyName, List.of("Basic Strike"));
 
         for (String name : abilityNames) {
             Ability ability = AbilityFactory.createAbility(name.trim());

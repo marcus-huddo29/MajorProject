@@ -7,13 +7,6 @@ import java.util.Scanner;
 import java.util.stream.Collectors;
 import java.util.Comparator;
 
-/**
- * Manages the entire combat sequence.
- * UPDATED:
- * - Handles new class resources (Rage, Focus).
- * - Displays new resource bars.
- * - Player's dealDamage method is now used.
- */
 public class Combat {
 
     public static void combatSequenceInit(Player player, ArrayList<Enemy> enemies, Scanner scanner) {
@@ -161,7 +154,6 @@ public class Combat {
             return false;
         }
 
-        // Resource Check
         String playerClass = player.getPlayerClass();
         int cost = chosen.getMpCost();
         switch (playerClass) {
@@ -215,7 +207,6 @@ public class Combat {
             applyAbilityEffects(player, chosen, target);
         }
         
-        // Spend Resource
         switch (playerClass) {
             case "wizard": player.reduceMp(cost); break;
             case "knight": player.spendRage(cost); break;
@@ -233,7 +224,7 @@ public class Combat {
         int totalDamage = (int)((baseDamage + bonusDamage) * DifficultyManager.getDifficulty().getPlayerDamageMultiplier());
 
         if(totalDamage > 0) {
-            player.dealDamage(totalDamage, target); // Use player's dealDamage method
+            player.dealDamage(totalDamage, target);
             System.out.printf("> Dealt %d damage to %s!%n", totalDamage, target.getName());
             if (target.getHealthPoints() <= 0) {
                 System.out.println("> " + target.getName() + " has been defeated!");
@@ -298,9 +289,9 @@ public class Combat {
         printHealthBar(player.getName(), player.getHealthPoints(), player.getMaxHealth());
         
         switch(player.getPlayerClass()){
-            case "wizard": printResourceBar("MP", player.getMp(), player.getMaxMp(), "\u001B[34m"); break; // Blue
-            case "knight": printResourceBar("Rage", player.getRage(), player.getMaxRage(), "\u001B[31m"); break; // Red
-            case "archer": printResourceBar("Focus", player.getFocus(), player.getMaxFocus(), "\u001B[32m"); break; // Green
+            case "wizard": printResourceBar("MP", player.getMp(), player.getMaxMp(), "\u001B[34m"); break;
+            case "knight": printResourceBar("Rage", player.getRage(), player.getMaxRage(), "\u001B[31m"); break;
+            case "archer": printResourceBar("Focus", player.getFocus(), player.getMaxFocus(), "\u001B[32m"); break;
         }
         
         System.out.println("---------------------------------------------");
@@ -324,7 +315,7 @@ public class Combat {
         StringBuilder bar = new StringBuilder(String.format("%-15s [%d/%d] ", name, current, max));
         bar.append("[").append(colorCode);
         for (int i = 0; i < filledBars; i++) bar.append("█");
-        bar.append("\u001B[0m"); // Reset color
+        bar.append("\u001B[0m");
         for (int i = 0; i < barLength - filledBars; i++) bar.append("-");
         bar.append("]");
         System.out.println(bar.toString());

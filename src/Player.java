@@ -1,3 +1,5 @@
+// Player.java
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -5,13 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-/**
- * Represents the player character.
- * UPDATED:
- * - Added Rage (Knight) and Focus (Archer) resources.
- * - Implemented diminishing returns for status effects.
- * - Methods to manage new resources.
- */
 public class Player {
 
     private final String name;
@@ -79,7 +74,7 @@ public class Player {
         this.healthPoints = this.maxHealth;
         this.mp = this.maxMp;
         this.rage = 0;
-        this.focus = 50; // Archers start with some focus
+        this.focus = 50;
     }
 
     public void dealDamage(int damage, Enemy target){
@@ -206,6 +201,11 @@ public class Player {
     
     public void applyStatus(String status, int duration) {
         if (status == null || status.equalsIgnoreCase("None")) return;
+        
+        if(status.equalsIgnoreCase("stun") && hasStatus("stun_immunity")){
+            System.out.println("> " + this.name + " is immune to stun!");
+            return;
+        }
 
         int timesApplied = statusResistance.getOrDefault(status.toLowerCase(), 0);
         int finalDuration = (int) (duration / Math.pow(2, timesApplied));
@@ -226,7 +226,7 @@ public class Player {
     
     public void tickStatusEffects() {
         if(playerClass.equals("archer")){
-            gainFocus(15); // Archers passively gain focus
+            gainFocus(15);
         }
 
         List<String> expired = new ArrayList<>();
@@ -253,6 +253,9 @@ public class Player {
         for (String status : expired) {
             statusEffects.remove(status);
             System.out.println("> " + status + " has worn off for " + name + ".");
+            if(status.equalsIgnoreCase("stun")){
+                applyStatus("stun_immunity", 2);
+            }
         }
     }
     
@@ -264,15 +267,9 @@ public class Player {
     public void heal(int amount) { this.healthPoints = Math.min(this.healthPoints + amount, this.maxHealth); }
     public void restoreMp(int amount) { this.mp = Math.min(this.maxMp, this.mp + amount); }
     public void reduceMp(int amount) { this.mp = Math.max(0, this.mp - amount); }
-    public void gainRage(int amount) {
-        this.rage = Math.min(this.maxRage, this.rage + amount);
-        System.out.println("> " + name + " gains " + amount + " Rage!");
-    }
+    public void gainRage(int amount) { this.rage = Math.min(this.maxRage, this.rage + amount); }
     public void spendRage(int amount) { this.rage = Math.max(0, this.rage - amount); }
-    public void gainFocus(int amount) {
-        this.focus = Math.min(this.maxFocus, this.focus + amount);
-        System.out.println("> " + name + " gains " + amount + " Focus!");
-    }
+    public void gainFocus(int amount) { this.focus = Math.min(this.maxFocus, this.focus + amount); }
     public void spendFocus(int amount) { this.focus = Math.max(0, this.focus - amount); }
 
     public void addCurrency(double amount) { this.currency += amount; }

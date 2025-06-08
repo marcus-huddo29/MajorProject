@@ -1,4 +1,4 @@
 name,playerClass,maxHP,startArmour,initRange,maxMp,maxRage,maxFocus,attackDistance,startCurr,experience
 Adventurer,knight,40,3,10,0,100,0,1,0,0
 Adventurer,wizard,30,1,8,60,0,0,1,0,0
-Adventurer,archer,35,2,12,0,0,100,1,0,0
+Adventurer,archer,40,2,12,0,0,100,1,0,0

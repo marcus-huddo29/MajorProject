@@ -1,3 +1,5 @@
+// Stage.java
+
 import java.util.ArrayList;
 
 public class Stage {
@@ -19,8 +21,6 @@ public class Stage {
             System.out.println("- " + e.getName() + " (HP: " + e.getHealthPoints() + ")");
         }
     }
-
-    // --- The runTurn() method was removed as it was unused ---
 
     public boolean isStageOver() {
         if (player.getHealthPoints() <= 0) {

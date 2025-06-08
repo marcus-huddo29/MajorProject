@@ -1,9 +1,7 @@
+// Ability.java
+
 import java.util.concurrent.ThreadLocalRandom;
 
-/**
- * Represents a single ability in the game.
- * UPDATED: Now includes mpCost for abilities.
- */
 public class Ability {
 
     private final String abilityName;
@@ -14,7 +12,7 @@ public class Ability {
     private final String targetType;
     private int currentCooldown;
     private double statusChance;
-    private final int mpCost; // NEW: Cost for the ability
+    private final int mpCost;
 
     public Ability(String abilityName, int minDamage, int maxDamage, String statusInflicted, int cooldown, String targetType, int mpCost) {
         this.abilityName = abilityName;
@@ -23,7 +21,7 @@ public class Ability {
         this.statusInflicted = statusInflicted;
         this.baseCooldown = cooldown;
         this.targetType = targetType;
-        this.mpCost = mpCost; // NEW
+        this.mpCost = mpCost;
         this.currentCooldown = 0;
         this.statusChance = (statusInflicted != null && !statusInflicted.equalsIgnoreCase("None")) ? 1.0 : 0.0;
     }
@@ -67,7 +65,7 @@ public class Ability {
     public String getTargetType() { return targetType; }
     public int getCurrentCooldown() { return currentCooldown; }
     public double getStatusChance() { return statusChance; }
-    public int getMpCost() { return mpCost; } // NEW
+    public int getMpCost() { return mpCost; }
 
     // --- Setters for Upgrades ---
     public void buffDamage(int amount) {

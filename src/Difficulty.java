@@ -1,14 +1,17 @@
+// Difficulty.java
+
 public enum Difficulty {
     // Defines the multipliers and rules for each difficulty level.
+    // UPDATED: Impossible multipliers adjusted to be challenging but not unwinnable.
     EASY(1.0, 1.0, 1, false, false),
     NORMAL(1.0, 1.5, 1, false, false),
     HARD(1.0, 2.0, 2, true, false),
-    IMPOSSIBLE(0.8, 2.5, 2, true, true);
+    IMPOSSIBLE(0.9, 2.0, 2, true, true); // Player Damage: 0.8->0.9, Enemy Damage: 2.5->2.0
 
-    private final double playerDamageMultiplier; // Not currently used, but here for future expansion.
+    private final double playerDamageMultiplier;
     private final double enemyDamageMultiplier;
-    private final int enemiesAttackingCount; // Not currently used.
-    private final boolean combinedInitiative; // Not currently used.
+    private final int enemiesAttackingCount; 
+    private final boolean combinedInitiative;
     private final boolean longerCooldown;
 
     Difficulty(double playerDamageMultiplier,

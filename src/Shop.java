@@ -1,3 +1,5 @@
+// Shop.java
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -6,7 +8,6 @@ import java.util.Scanner;
 
 public class Shop {
 
-    // Inner class now includes level requirement.
     static class ShopItem {
         String name, type, description, restriction;
         int value, cost, levelRequirement;
@@ -24,7 +25,6 @@ public class Shop {
 
         System.out.println("\n=== Welcome to the Shop ===");
         while (true) {
-            // UPDATED: Filter items based on player level and other criteria.
             ArrayList<ShopItem> availableItems = filterAvailableItems(items, player);
 
             System.out.printf("\nYour currency: %.1f | Your Level: %d\n", player.getCurrency(), player.getLevelsGained() + 1);
@@ -54,18 +54,18 @@ public class Shop {
     private static ArrayList<ShopItem> loadShopItems(String filename) {
         ArrayList<ShopItem> items = new ArrayList<>();
         try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
-            br.readLine(); // skip header
+            br.readLine(); 
             String line;
             while ((line = br.readLine()) != null) {
                 String[] p = line.split(",");
-                if (p.length < 7) continue; // UPDATED for new column
+                if (p.length < 7) continue;
                 String name = p[0].trim();
                 String type = p[1].trim();
                 int value = Integer.parseInt(p[2].trim());
                 int cost = Integer.parseInt(p[3].trim());
                 String desc = p[4].trim();
                 String restriction = p[5].trim().toLowerCase();
-                int levelReq = Integer.parseInt(p[6].trim()); // NEW
+                int levelReq = Integer.parseInt(p[6].trim());
                 items.add(new ShopItem(name, type, value, cost, desc, restriction, levelReq));
             }
         } catch (IOException | NumberFormatException e) {
@@ -80,17 +80,14 @@ public class Shop {
         int playerLevel = player.getLevelsGained() + 1;
 
         for (ShopItem it : allItems) {
-            // NEW: Check level requirement.
             if (it.levelRequirement > playerLevel) {
                 continue;
             }
 
-            // Check class restriction.
             if (!it.restriction.equals("all") && !it.restriction.equals(playerClass)) {
                 continue; 
             }
 
-            // Check if weapon is already owned.
             if (it.type.equals("weapon")) {
                 if (player.getOwnedWeapons().contains(it.name)) {
                     continue;
@@ -133,7 +130,6 @@ public class Shop {
         }
         
         if (sel.type.equals("weapon")) {
-             // Message is now handled in Player.equipWeapon
         } else {
             System.out.println("Purchased " + qty + " x " + sel.name + " and added to inventory!");
         }

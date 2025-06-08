@@ -1,15 +1,10 @@
+// AutoBattle.java
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Runs an entire combat encounter automatically.
- * UPDATED:
- * - Now handles multiple enemies.
- * - AI focuses on the weakest enemy.
- * - AI will use AoE abilities if it's a good value proposition.
- */
 public class AutoBattle {
 
     private static void delay(int ms) {
@@ -77,7 +72,6 @@ public class AutoBattle {
                     if(target.getHealthPoints() > 0) applyAutoAbility(player, bestAbility, target);
                 }
             } else {
-                // Target the weakest enemy
                 Enemy target = enemies.stream()
                                       .filter(e -> e.getHealthPoints() > 0)
                                       .min(Comparator.comparingInt(Enemy::getHealthPoints))
@@ -86,7 +80,6 @@ public class AutoBattle {
             }
             
             bestAbility.use();
-            // Spend Resource
             int cost = bestAbility.getMpCost();
             switch (player.getPlayerClass()) {
                 case "wizard": player.reduceMp(cost); break;
@@ -123,7 +116,6 @@ public class AutoBattle {
         for (Ability a : player.getAbilities()) {
             if (!a.isReady()) continue;
 
-            // Check resource cost
             int cost = a.getMpCost();
             boolean canAfford = false;
             switch(player.getPlayerClass()){
@@ -135,7 +127,7 @@ public class AutoBattle {
 
             double score = (double)(a.getMinDamage() + a.getMaxDamage()) / 2.0;
             if(a.getTargetType().equalsIgnoreCase("All")) {
-                score *= Math.min(livingEnemies.size(), 3); // Value AoE more with more targets, up to a point
+                score *= Math.min(livingEnemies.size(), 3);
             }
             
             if (score > bestScore) {

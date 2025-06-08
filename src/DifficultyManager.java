@@ -1,5 +1,6 @@
+// DifficultyManager.java
+
 public class DifficultyManager {
-    // Starts on Easy by default.
     private static Difficulty current = Difficulty.EASY;
 
     public static void setDifficulty(Difficulty d) {

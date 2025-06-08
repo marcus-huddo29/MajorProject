@@ -1,3 +1,5 @@
+// Enemy.java
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -8,12 +10,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Comparator;
 
-/**
- * Represents an enemy character.
- * UPDATED:
- * - Implemented diminishing returns for status effects.
- * - Bosses now have innate resistance to stun/polymorph.
- */
 public class Enemy {
 
     private final String name;
@@ -39,12 +35,6 @@ public class Enemy {
         this.currencyDrop = currencyDrop;
         this.experienceDrop = experienceDrop;
         this.abilities = abilities;
-
-        // Bosses get innate resistance
-        if(name.equals("The Goblin King") || name.equals("Dark Sorcerer")){
-            statusResistance.put("stun", 2);
-            statusResistance.put("polymorph", 2);
-        }
     }
 
     public void takeDamage(int amount) {
@@ -136,6 +126,11 @@ public class Enemy {
     public void applyStatus(String status, int duration) {
         if (status == null || status.equalsIgnoreCase("None")) return;
         
+        if(status.equalsIgnoreCase("stun") && hasStatus("stun_immunity")){
+            System.out.println("> " + this.name + " is immune to stun!");
+            return;
+        }
+        
         int timesApplied = statusResistance.getOrDefault(status.toLowerCase(), 0);
         int finalDuration = (int) (duration / Math.pow(2, timesApplied));
 
@@ -184,13 +179,16 @@ public class Enemy {
         for (String status : expired) {
             statusEffects.remove(status);
             System.out.println("> " + status + " has worn off for " + name + ".");
+            if(status.equalsIgnoreCase("stun")){
+                applyStatus("stun_immunity", 2);
+            }
         }
     }
     
     public void clearAllStatusEffects() {
         statusEffects.clear();
+        statusResistance.clear();
         temporaryDamageBuff = 0;
-        // Don't clear resistance, it should persist for the encounter
     }
 
     public void heal(int amount) {

@@ -8,14 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-/**
- * The main game client.
- * UPDATED:
- * - Implemented a simple Town Hub between worlds.
- * - Added more narrative flavour text.
- * - Player setup now reads new stats from CSV.
- * - Auto-battle is now enabled for multi-enemy stages.
- */
 public class Client {
 
     private static final int FINAL_WORLD = 3; 
@@ -79,7 +71,7 @@ public class Client {
         }
 
         while (true) {
-            if (stageNumber > 7) { // Boss Fight
+            if (stageNumber > 7) { 
                 System.out.println("\n\n!! WARNING: A powerful presence bars your way !!\n");
                 delay(2000);
 
@@ -102,12 +94,10 @@ public class Client {
                 player1.addExperience(expReward);
                 System.out.printf("You gained a massive bonus of %.1f currency and %.1f experience!\n", currencyReward, expReward);
                 
-                if (worldNumber >= FINAL_WORLD) return true; // Game Won!
+                if (worldNumber >= FINAL_WORLD) return true;
 
-                // --- Town Hub ---
                 handleTownHub(player1, scanner);
                 
-                // --- New World ---
                 worldNumber++;
                 stageNumber = 1;
                 
@@ -150,7 +140,7 @@ public class Client {
             if (player1.canLevelUp()) {
                 handleLevelUp(player1, scanner);
             } else {
-                int recovery = (int)(player1.getMaxHealth() * 0.25);
+                int recovery = (int)(player1.getMaxHealth() * 0.15);
                 player1.heal(recovery);
                 System.out.printf("You recovered %d HP.\n", recovery);
             }
@@ -195,7 +185,6 @@ public class Client {
     }
 
     private static Enemy createBossEnemy(String bossName, int worldNumber) {
-        // This method remains largely the same but is still crucial.
         try (BufferedReader reader = new BufferedReader(new FileReader("enemyStats.csv"))) {
             String line;
             reader.readLine(); 
@@ -273,9 +262,6 @@ public class Client {
         }
         return null;
     }
-
-    // Other helper methods (handlePreCombatActions, generateStageEnemies, etc.) remain largely the same
-    // but are included here for the code to be complete.
     
     private static void handlePreCombatActions(Player player, Scanner scanner) {
         while (true) {
@@ -307,7 +293,6 @@ public class Client {
         stageEnemies.add(new Enemy(template.getName(), finalHp, finalArmour, template.getInitiative(), template.getCurrencyDrop(), template.getExperienceDrop(), scaledAbilities));
         Difficulty diff = DifficultyManager.getDifficulty();
         if ((diff == Difficulty.HARD || diff == Difficulty.IMPOSSIBLE) && stageNumber > 2) {
-            // Create a distinct copy for the second enemy
              ArrayList<Ability> secondEnemyAbilities = new ArrayList<>();
              for(Ability a : scaledAbilities) secondEnemyAbilities.add(AbilityFactory.createAbility(a.getAbilityName()));
             stageEnemies.add(new Enemy(template.getName(), finalHp, finalArmour, template.getInitiative(), template.getCurrencyDrop(), template.getExperienceDrop(), secondEnemyAbilities));
