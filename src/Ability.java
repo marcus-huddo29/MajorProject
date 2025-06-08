@@ -7,7 +7,7 @@ public class Ability {
     private double experienceRequired;
     private int level;
     private final String statusInflicted;
-    private final int cooldown;
+    private final int cooldown; // The base cooldown, does not change.
     private int currentCooldown;
 
     //Constructor
@@ -25,6 +25,9 @@ public class Ability {
     }
 
     public int getRandomDamage() {
+        if (maxDamage <= minDamage) {
+            return minDamage;
+        }
         return (int) (Math.random() * (maxDamage - minDamage + 1)) + minDamage;
     }
 
@@ -53,13 +56,12 @@ public class Ability {
             System.out.println(abilityName + " is still on cooldown for " + currentCooldown + " more turns.");
             return;
         }
-        // Calculate base cooldown scaled by ability “power” (higher maxDamage → longer CD)
-        int powerScale = Math.max(1, maxDamage / Math.max(1, minDamage));
-        int baseCd = cooldown * powerScale;
+        // --- CHANGE --- Simplified cooldown logic. It no longer scales with damage, making it predictable.
+        // It only scales with the game's difficulty setting.
         if (DifficultyManager.getDifficulty().useLongerCooldown()) {
-            currentCooldown = baseCd * 2;
+            this.currentCooldown = this.cooldown * 2;
         } else {
-            currentCooldown = baseCd;
+            this.currentCooldown = this.cooldown;
         }
     }
 

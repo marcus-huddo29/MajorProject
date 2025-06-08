@@ -8,11 +8,12 @@ public class Enemy {
 
     private final String name;
     private int healthPoints;
+    private final int maxHealth; // Added for display purposes
     private final int armour;
     private final int initiative;
     private final int attackDistance;
-    public double currencyDrop;
-    public double experienceDrop;
+    private final double currencyDrop;
+    private final double experienceDrop;
     private boolean stunned = false;
     private final ArrayList<Ability> abilities;
 
@@ -22,6 +23,7 @@ public class Enemy {
     public Enemy(String name, int healthPoints, int armour, int initiative,
                  int attackDistance, double currencyDrop, double experienceDrop, ArrayList<Ability> abilities) {
         this.name = name;
+        this.maxHealth = healthPoints;
         this.healthPoints = healthPoints;
         this.armour = armour;
         this.initiative = initiative;
@@ -46,25 +48,34 @@ public class Enemy {
     public int getInitiative() {
         return this.initiative;
     }
+    
+    public int getMaxHealth() {
+        return this.maxHealth;
+    }
 
     public int getHealthPoints() {
         return this.healthPoints;
     }
 
-    // --- MODIFIED: Enemy now correctly uses its armour stat ---
+    public double getCurrencyDrop() {
+        return this.currencyDrop;
+    }
+    
+    public double getExperienceDrop() {
+        return this.experienceDrop;
+    }
+
     public void takeDamage(int amount) {
-        int actualDamage = amount - this.armour;
-        if (actualDamage < 0) {
-            actualDamage = 0; // Prevent healing from attacks
+        // --- CHANGE --- Armour now blocks at least 1 damage to always have some effect.
+        int actualDamage = Math.max(1, amount - this.armour);
+        if (amount <= this.armour) {
+            actualDamage = 1; // Always take at least 1 damage
         }
+        
         this.healthPoints -= actualDamage;
         if (this.healthPoints < 0) {
             this.healthPoints = 0;
         }
-    }
-
-    public int getRandomAttackDamage() {
-        return 1 + new Random().nextInt(initiative);
     }
 
     public int rollInitiative() {
@@ -77,9 +88,14 @@ public class Enemy {
 
     public static ArrayList<Enemy> generateEnemies() {
         ArrayList<Enemy> enemyList = new ArrayList<>();
-        ArrayList<Ability> basicAbilities = new ArrayList<>();
-        basicAbilities.add(new Ability("Basic Strike", 3, 7, 0, "None", 1));
-        basicAbilities.add(new Ability("Power Hit", 5, 10, 0, "None", 2));
+        
+        // --- CHANGE --- Each enemy type can have more distinct abilities.
+        ArrayList<Ability> basicMeleeAbilities = new ArrayList<>();
+        basicMeleeAbilities.add(new Ability("Basic Strike", 3, 7, 0, "None", 1));
+        basicMeleeAbilities.add(new Ability("Power Hit", 5, 10, 0, "None", 2));
+        
+        ArrayList<Ability> basicMagicAbilities = new ArrayList<>();
+        basicMagicAbilities.add(new Ability("Shadow Bolt", 4, 8, 0, "None", 1));
 
         try (BufferedReader reader = new BufferedReader(new FileReader("enemyStats.csv"))) {
             String line = reader.readLine(); // skip header
@@ -92,11 +108,22 @@ public class Enemy {
                 int eDistance = Integer.parseInt(parts[4]);
                 double eCurr = Double.parseDouble(parts[5]);
                 double eExp = Double.parseDouble(parts[6]);
-                enemyList.add(new Enemy(eName, eHp, eArmour, eInitiative, eDistance, eCurr, eExp, new ArrayList<>(basicAbilities)));
+
+                // Assign abilities based on name for variety
+                ArrayList<Ability> chosenAbilities;
+                if (eName.contains("Mage") || eName.contains("Sorcerer")) {
+                    chosenAbilities = new ArrayList<>(basicMagicAbilities);
+                } else {
+                    chosenAbilities = new ArrayList<>(basicMeleeAbilities);
+                }
+                enemyList.add(new Enemy(eName, eHp, eArmour, eInitiative, eDistance, eCurr, eExp, chosenAbilities));
             }
         } catch (IOException ex) {
             System.err.println("Error loading enemyStats.csv: " + ex.getMessage());
-            ex.printStackTrace();
+            // Create a default enemy if loading fails so the game doesn't crash
+            ArrayList<Ability> fallback = new ArrayList<>();
+            fallback.add(new Ability("Desperate Lunge", 1, 1, 0, "None", 0));
+            enemyList.add(new Enemy("Error Blob", 10, 0, 1, 1, 1, 1, fallback));
         }
         return enemyList;
     }

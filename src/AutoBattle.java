@@ -10,7 +10,6 @@ public class AutoBattle {
     }
 
     public static void runStage(Player player, ArrayList<Enemy> enemies, int stageNumber) {
-        // --- MODIFIED: Removed the main header to prevent confusing duplicate output ---
         player.setAutoMode(true);
         
         ArrayList<Enemy> enemiesInStage = new ArrayList<>(enemies);
@@ -22,8 +21,6 @@ public class AutoBattle {
                 break;
             }
 
-            // --- MODIFIED: The Client now handles this announcement ---
-            // System.out.printf("--- Beginning Encounter vs %s ---\n", currentEnemy.getName());
             System.out.printf("Player Stats – HP: %d/%d | MP: %d/%d\n", player.getHealthPoints(), player.getMaxHealth(), player.getMp(), player.getMaxMp());
 
             for (Ability a : player.getAbilities()) a.resetCooldown();
@@ -33,33 +30,36 @@ public class AutoBattle {
                 
                 if (player.getHealthPoints() <= 0) break;
                 
-                System.out.println("\n--- Player's Turn ---");
+                System.out.println("\n--- Player's Turn (Auto) ---");
     
                 Ability bestAbility = null;
                 int bestScore = -1;
 
-                // --- NEW: Smarter AI Logic ---
+                // --- CHANGE --- Smarter AI logic that considers cooldowns and remaining enemy HP to avoid overkill.
                 for (Ability a : player.getAbilities()) {
-                    int cost = a.getAbilityName().equals("Wand Bonk") ? 0 : a.getMinDamage();
-                    if (a.isReady() && (player.getMaxMp() == 0 || player.getMp() >= cost)) {
+                    int mpCost = player.getPlayerClass().equals("wizard") && !a.getAbilityName().equals("Mana Dart") ? a.getMinDamage() : 0;
+                    if (a.isReady() && player.getMp() >= mpCost) {
                         
-                        // Overkill-prevention: don't use a powerful ability on a near-dead enemy
-                        if (a.getMaxDamage() > currentEnemy.getHealthPoints() * 2 && a.getCooldown() > 0) {
-                            continue; // Save this strong cooldown for a tougher fight
+                        // Score considers damage efficiency (damage per turn if cooldown is factored in).
+                        int score = a.getMaxDamage() / (a.getCooldown() + 1);
+
+                        // If the ability is massive overkill, reduce its score significantly.
+                        if (a.getMinDamage() > currentEnemy.getHealthPoints()) {
+                           score /= 2;
                         }
 
-                        int score = a.getMaxDamage() + player.getExtraDamage();
                         if (score > bestScore) {
                             bestScore = score;
                             bestAbility = a;
                         }
                     }
                 }
-                // If no 'smart' choice was found, fall back to any available move
+                
+                // Fallback to the first available ability if no "best" was found (e.g. all scores were 0)
                 if (bestAbility == null) {
                     for (Ability a : player.getAbilities()) {
-                         int cost = a.getAbilityName().equals("Wand Bonk") ? 0 : a.getMinDamage();
-                         if (a.isReady() && (player.getMaxMp() == 0 || player.getMp() >= cost)) {
+                         int mpCost = player.getPlayerClass().equals("wizard") && !a.getAbilityName().equals("Mana Dart") ? a.getMinDamage() : 0;
+                         if (a.isReady() && player.getMp() >= mpCost) {
                             bestAbility = a;
                             break;
                          }
@@ -67,26 +67,29 @@ public class AutoBattle {
                 }
     
                 if (bestAbility != null) {
-                    delay(300);
+                    delay(500);
                     System.out.println("Auto: " + player.getName() + " uses " + bestAbility.getAbilityName());
-                    delay(300);
+                    delay(500);
                     int dmg = bestAbility.getRandomDamage() + player.getExtraDamage();
                     currentEnemy.takeDamage(dmg);
                     System.out.println("Auto dealt " + dmg + " to " + currentEnemy.getName() + " (HP left: " + currentEnemy.getHealthPoints() + ")");
                     bestAbility.use();
-                    if (player.getMaxMp() > 0 && !bestAbility.getAbilityName().equals("Wand Bonk")) {
+                    
+                    if (player.getPlayerClass().equals("wizard") && !bestAbility.getAbilityName().equals("Mana Dart")) {
                         player.reduceMp(bestAbility.getMinDamage());
                     }
+
                 } else {
                     System.out.println(player.getName() + " has no abilities ready.");
                 }
+
                 for (Ability a : player.getAbilities()) a.tickCooldown();
     
                 if (currentEnemy.getHealthPoints() <= 0) {
                     continue; 
                 }
     
-                System.out.println("--- Enemies Strike ---");
+                System.out.println("\n--- Enemies Strike (Auto) ---");
                 if (player.getHealthPoints() > 0) { 
                     ArrayList<Ability> enemyAbilities = currentEnemy.getAbilities();
                     if (!enemyAbilities.isEmpty()) {
@@ -107,9 +110,8 @@ public class AutoBattle {
             }
         }
         
-        // --- MODIFIED: Removed confusing end-of-battle message ---
         if (player.getHealthPoints() <= 0) {
-            System.out.println("Auto: " + player.getName() + " was defeated...");
+            System.out.println("\nAuto-Battle Result: " + player.getName() + " was defeated...");
         }
         player.setAutoMode(false);
     }
