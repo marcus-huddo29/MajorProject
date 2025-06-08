@@ -75,7 +75,11 @@ public class Client {
                 System.out.println("\n\n!! WARNING: A powerful presence bars your way !!\n");
                 delay(2000);
 
-                Enemy boss = createBossEnemy("The Goblin King", worldNumber);
+                Enemy boss = createBossEnemy(worldNumber);
+                if (boss == null) {
+                    System.err.println("FATAL: Could not create boss for world " + worldNumber);
+                    return false;
+                }
                 System.out.println("The air grows heavy... " + boss.getName() + ", scourge of World " + worldNumber + ", blocks your path!");
                 ArrayList<Enemy> bossEncounter = new ArrayList<>();
                 bossEncounter.add(boss);
@@ -96,7 +100,7 @@ public class Client {
                 
                 if (worldNumber >= FINAL_WORLD) return true;
 
-                handleTownHub(player1, scanner);
+                handleTownHub(player1, scanner, worldNumber);
                 
                 worldNumber++;
                 stageNumber = 1;
@@ -153,12 +157,14 @@ public class Client {
         }
     }
     
-    private static void handleTownHub(Player player, Scanner scanner) {
+    private static void handleTownHub(Player player, Scanner scanner, int worldNumber) {
         System.out.println("\n--- You arrive at a small, fortified outpost. ---");
+        int healerCost = 15 * worldNumber;
+
         while(true){
             System.out.println("\nWhat would you like to do?");
             System.out.println("1) Visit the Shop");
-            System.out.println("2) Visit the Healer (Fully restore HP/MP for 15 currency)");
+            System.out.printf("2) Visit the Healer (Fully restore HP/MP for %d currency)\n", healerCost);
             System.out.println("3) Speak to the Sage");
             System.out.println("4) Continue your journey");
 
@@ -166,8 +172,8 @@ public class Client {
             if(choice == 1) {
                 Shop.openShop(player, scanner);
             } else if (choice == 2) {
-                if (player.getCurrency() >= 15) {
-                    player.addCurrency(-15);
+                if (player.getCurrency() >= healerCost) {
+                    player.addCurrency(-healerCost);
                     player.heal(player.getMaxHealth());
                     player.restoreMp(player.getMaxMp());
                     System.out.println("> The Healer's magic soothes your wounds. You are fully restored!");
@@ -176,7 +182,12 @@ public class Client {
                 }
             } else if (choice == 3) {
                  System.out.println("\nThe Sage looks at you with ancient eyes and whispers...");
-                 System.out.println("\"...beware the one who commands both fire and shadow... their fall will herald the true dawn...\"");
+                 if (worldNumber == 1) {
+                    System.out.println("\"...the path ahead is guarded by a crude king, but true evil lurks in the shadows beyond...\"");
+                 } else if (worldNumber == 2) {
+                    System.out.println("\"...beware the master of the undead... their fall will herald the true dawn...\"");
+                 }
+                 
             } else {
                 System.out.println("\nYou restock your supplies and head back into the wilds.");
                 break;
@@ -184,7 +195,15 @@ public class Client {
         }
     }
 
-    private static Enemy createBossEnemy(String bossName, int worldNumber) {
+    private static Enemy createBossEnemy(int worldNumber) {
+        String bossName;
+        switch(worldNumber) {
+            case 1: bossName = "The Goblin King"; break;
+            case 2: bossName = "High Necromancer"; break;
+            case 3: bossName = "The Gloom King"; break;
+            default: return null; // Should not happen
+        }
+
         try (BufferedReader reader = new BufferedReader(new FileReader("enemyStats.csv"))) {
             String line;
             reader.readLine(); 
@@ -192,13 +211,15 @@ public class Client {
                 String[] parts = line.split(",");
                 if (parts[0].trim().equalsIgnoreCase(bossName)) {
                     String eName = parts[0].trim();
-                    int eHp = (int) (Integer.parseInt(parts[1].trim()) * (1 + (worldNumber - 1) * 0.5));
-                    int eArmour = (int) (Integer.parseInt(parts[2].trim()) * (1 + (worldNumber - 1) * 0.3));
+                    // Bosses have fixed stats from the CSV, not scaled like regular enemies
+                    int eHp = Integer.parseInt(parts[1].trim());
+                    int eArmour = Integer.parseInt(parts[2].trim());
                     int eInitiative = Integer.parseInt(parts[3].trim());
                     double eCurr = Double.parseDouble(parts[5].trim());
                     double eExp = Double.parseDouble(parts[6].trim());
+                    String eAiType = parts[7].trim();
                     ArrayList<Ability> enemyAbilities = EnemyAbilityLoader.getAbilitiesForEnemy(eName);
-                    return new Enemy(eName, eHp, eArmour, eInitiative, eCurr, eExp, enemyAbilities);
+                    return new Enemy(eName, eHp, eArmour, eInitiative, eCurr, eExp, enemyAbilities, eAiType);
                 }
             }
         } catch (IOException | NumberFormatException e) {
@@ -290,12 +311,12 @@ public class Client {
             newAbility.applyDamageMultiplier(damageMultiplier);
             scaledAbilities.add(newAbility);
         }
-        stageEnemies.add(new Enemy(template.getName(), finalHp, finalArmour, template.getInitiative(), template.getCurrencyDrop(), template.getExperienceDrop(), scaledAbilities));
+        stageEnemies.add(new Enemy(template.getName(), finalHp, finalArmour, template.getInitiative(), template.getCurrencyDrop(), template.getExperienceDrop(), scaledAbilities, template.getAiType()));
         Difficulty diff = DifficultyManager.getDifficulty();
         if ((diff == Difficulty.HARD || diff == Difficulty.IMPOSSIBLE) && stageNumber > 2) {
              ArrayList<Ability> secondEnemyAbilities = new ArrayList<>();
              for(Ability a : scaledAbilities) secondEnemyAbilities.add(AbilityFactory.createAbility(a.getAbilityName()));
-            stageEnemies.add(new Enemy(template.getName(), finalHp, finalArmour, template.getInitiative(), template.getCurrencyDrop(), template.getExperienceDrop(), secondEnemyAbilities));
+            stageEnemies.add(new Enemy(template.getName(), finalHp, finalArmour, template.getInitiative(), template.getCurrencyDrop(), template.getExperienceDrop(), secondEnemyAbilities, template.getAiType()));
         }
         return stageEnemies;
     }

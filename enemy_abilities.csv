@@ -1,6 +1,6 @@
 enemyName,ability1,ability2,ability3
 Thief,Quick Stab,Poison Shiv
-Goblin,Basic Strike
+Goblin,Basic Strike,PoisonBite
 Orc Brute,Power Hit,Basic Strike
 Shadow Mage,Shadow Bolt,Weakening Curse
 Skeleton Knight,Slash,Shield Bash
@@ -22,3 +22,5 @@ Storm Eagle,Whirlwind
 The Goblin King,Power Hit,Whirlwind,Guard Stance
 Goblin Shaman,Lesser Heal,Wand Bonk
 Orc Warchief,Rally,Power Hit
+High Necromancer,Shadow Bolt,Weakening Curse,Summon Skeleton
+The Gloom King,Gloom Lash,Power Hit,Soul Siphon,Whirlwind

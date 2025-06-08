@@ -28,3 +28,6 @@ Power Hit,5,10,None,2,Single,0
 Lesser Heal,0,5,Heal,3,Single,10
 Rally,0,3,Buff,4,Single,0
 Shield Bash,5,8,Stun,3,Single,20
+Summon Skeleton,0,0,Summon,5,Single,0
+Gloom Lash,18,25,Vulnerable,3,Single,0
+Soul Siphon,10,15,Drain,4,Single,0

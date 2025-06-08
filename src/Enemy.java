@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Comparator;
+import java.util.stream.Collectors;
 
 public class Enemy {
 
@@ -20,13 +21,14 @@ public class Enemy {
     private final double currencyDrop;
     private final double experienceDrop;
     private final ArrayList<Ability> abilities;
+    private final String aiType;
     
     private final Map<String, Integer> statusEffects = new HashMap<>();
     private final Map<String, Integer> statusResistance = new HashMap<>();
     private int temporaryDamageBuff = 0;
 
     public Enemy(String name, int healthPoints, int armour, int initiative,
-                 double currencyDrop, double experienceDrop, ArrayList<Ability> abilities) {
+                 double currencyDrop, double experienceDrop, ArrayList<Ability> abilities, String aiType) {
         this.name = name;
         this.maxHealth = healthPoints;
         this.healthPoints = healthPoints;
@@ -35,6 +37,7 @@ public class Enemy {
         this.currencyDrop = currencyDrop;
         this.experienceDrop = experienceDrop;
         this.abilities = abilities;
+        this.aiType = aiType;
     }
 
     public void takeDamage(int amount) {
@@ -57,47 +60,62 @@ public class Enemy {
     }
 
     public Ability chooseBestAbility(Player player, List<Enemy> allies) {
-        List<Ability> availableAbilities = new ArrayList<>();
-        for (Ability a : this.abilities) {
-            if (a.isReady()) {
-                availableAbilities.add(a);
-            }
-        }
+        List<Ability> availableAbilities = this.abilities.stream()
+            .filter(Ability::isReady)
+            .collect(Collectors.toList());
+
         if (availableAbilities.isEmpty()) return null;
 
-        for (Ability ability : availableAbilities) {
-            if (ability.getStatusInflicted().equalsIgnoreCase("Heal")) {
-                Enemy targetToHeal = allies.stream()
-                    .filter(e -> e.getHealthPoints() > 0 && (double)e.getHealthPoints() / e.getMaxHealth() < 0.5)
-                    .min(Comparator.comparingInt(Enemy::getHealthPoints))
-                    .orElse(null);
-                
-                if (targetToHeal != null) return ability;
-            }
+        switch(this.aiType.toLowerCase()) {
+            case "defensive":
+                return chooseDefensiveAbility(availableAbilities, allies);
+            case "saboteur":
+                return chooseSaboteurAbility(availableAbilities, player);
+            case "aggressive":
+            default:
+                return chooseAggressiveAbility(availableAbilities);
         }
+    }
 
-        for (Ability ability : availableAbilities) {
-            if (ability.getStatusInflicted().equalsIgnoreCase("Buff")) {
-                Enemy targetToBuff = allies.stream()
-                    .filter(e -> e.getHealthPoints() > 0 && e.temporaryDamageBuff == 0)
-                    .findFirst()
-                    .orElse(null);
-
-                if (targetToBuff != null) return ability;
-            }
-        }
-
-        for (Ability a : availableAbilities) {
-            String status = a.getStatusInflicted();
-            if (status != null && !status.equalsIgnoreCase("None") && !status.equalsIgnoreCase("Heal") && !status.equalsIgnoreCase("Buff") && !player.hasStatus(status)) {
-                if (Math.random() < 0.4) return a;
-            }
-        }
-
-        return availableAbilities.stream()
+    private Ability chooseAggressiveAbility(List<Ability> available) {
+        // Prioritizes the ability with the highest potential average damage.
+        return available.stream()
             .filter(a -> !a.getStatusInflicted().equalsIgnoreCase("Heal") && !a.getStatusInflicted().equalsIgnoreCase("Buff"))
             .max(Comparator.comparingInt(a -> (a.getMinDamage() + a.getMaxDamage()) / 2))
-            .orElse(null);
+            .orElse(available.get(0)); // Failsafe
+    }
+
+    private Ability chooseDefensiveAbility(List<Ability> available, List<Enemy> allies) {
+        // First, check if any ally (or self) is hurt and needs healing.
+        for (Ability ability : available) {
+            if (ability.getStatusInflicted().equalsIgnoreCase("Heal")) {
+                boolean someoneNeedsHealing = allies.stream()
+                    .anyMatch(e -> e.getHealthPoints() > 0 && (double)e.getHealthPoints() / e.getMaxHealth() < 0.6);
+                if (someoneNeedsHealing) return ability;
+            }
+        }
+        // Second, check if an ally can be buffed.
+        for (Ability ability : available) {
+             if (ability.getStatusInflicted().equalsIgnoreCase("Buff")) {
+                boolean someoneNeedsBuff = allies.stream()
+                    .anyMatch(e -> e.getHealthPoints() > 0 && e.temporaryDamageBuff == 0);
+                if(someoneNeedsBuff) return ability;
+            }
+        }
+        // Otherwise, act aggressively.
+        return chooseAggressiveAbility(available);
+    }
+
+    private Ability chooseSaboteurAbility(List<Ability> available, Player player) {
+        // Prioritizes applying a status effect the player doesn't already have.
+        for (Ability a : available) {
+            String status = a.getStatusInflicted();
+            if (status != null && !status.equalsIgnoreCase("None") && !player.hasStatus(status)) {
+                return a; 
+            }
+        }
+        // If no new status can be applied, act aggressively.
+        return chooseAggressiveAbility(available);
     }
     
     public static ArrayList<Enemy> generateEnemiesFromCSV(String filename) {
@@ -107,15 +125,16 @@ public class Enemy {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
-                if(parts.length < 7) continue;
+                if(parts.length < 8) continue;
                 String eName = parts[0].trim();
                 int eHp = Integer.parseInt(parts[1].trim());
                 int eArmour = Integer.parseInt(parts[2].trim());
                 int eInitiative = Integer.parseInt(parts[3].trim());
                 double eCurr = Double.parseDouble(parts[5].trim());
                 double eExp = Double.parseDouble(parts[6].trim());
+                String eAiType = parts[7].trim();
                 ArrayList<Ability> enemyAbilities = EnemyAbilityLoader.getAbilitiesForEnemy(eName);
-                enemyList.add(new Enemy(eName, eHp, eArmour, eInitiative, eCurr, eExp, enemyAbilities));
+                enemyList.add(new Enemy(eName, eHp, eArmour, eInitiative, eCurr, eExp, enemyAbilities, eAiType));
             }
         } catch (IOException | NumberFormatException ex) {
             System.err.println("Error loading or parsing " + filename + ": " + ex.getMessage());
@@ -201,6 +220,7 @@ public class Enemy {
     }
 
     // --- Getters ---
+    public String getAiType() { return aiType; }
     public int getTemporaryDamageBuff() { return temporaryDamageBuff; }
     public ArrayList<Ability> getAbilities() { return this.abilities; }
     public String getName() { return this.name; }

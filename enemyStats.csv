@@ -1,24 +1,26 @@
-name,maxHp,armour,initiative,attackDistance,currencyDrop,experienceDrop
-Thief,20,3,10,1,8,5
-Goblin,18,2,8,1,7,4
-Orc Brute,40,8,6,1,15,10
-Shadow Mage,25,4,12,2,12,9
-Skeleton Knight,30,7,7,1,10,7
-Bandit Leader,35,5,11,1,20,12
-Dark Sorcerer,45,6,15,2,25,15
-Forest Troll,50,10,6,1,22,14
-Cave Bat,15,1,14,2,5,3
-Fire Elemental,38,5,10,2,25,16
-Ice Golem,55,12,4,1,30,18
-Skeleton Archer,25,3,9,2,10,6
-Necromancer,40,5,12,2,22,13
-Hobgoblin,32,4,9,1,14,8
-Stone Guardian,60,15,3,1,35,20
-Shadow Assassin,35,3,16,1,25,14
-Poisonous Frog,20,1,8,2,8,5
-Vampire Bat,22,2,13,2,12,7
-Lava Beast,50,8,10,1,30,19
-Storm Eagle,33,3,17,3,18,11
-The Goblin King,80,10,10,1,100,50
-Goblin Shaman,25,2,12,1,15,10
-Orc Warchief,50,7,8,1,25,15
+name,maxHp,armour,initiative,attackDistance,currencyDrop,experienceDrop,AIType
+Thief,20,3,10,1,8,5,Aggressive
+Goblin,18,2,8,1,7,4,Aggressive
+Orc Brute,40,8,6,1,15,10,Aggressive
+Shadow Mage,25,4,12,2,12,9,Saboteur
+Skeleton Knight,30,7,7,1,10,7,Defensive
+Bandit Leader,35,5,11,1,20,12,Aggressive
+Dark Sorcerer,45,6,15,2,25,15,Saboteur
+Forest Troll,50,10,6,1,22,14,Aggressive
+Cave Bat,15,1,14,2,5,3,Aggressive
+Fire Elemental,38,5,10,2,25,16,Aggressive
+Ice Golem,55,12,4,1,30,18,Defensive
+Skeleton Archer,25,3,9,2,10,6,Aggressive
+Necromancer,40,5,12,2,22,13,Saboteur
+Hobgoblin,32,4,9,1,14,8,Aggressive
+Stone Guardian,60,15,3,1,35,20,Defensive
+Shadow Assassin,35,3,16,1,25,14,Saboteur
+Poisonous Frog,20,1,8,2,8,5,Saboteur
+Vampire Bat,22,2,13,2,12,7,Aggressive
+Lava Beast,50,8,10,1,30,19,Aggressive
+Storm Eagle,33,3,17,3,18,11,Aggressive
+The Goblin King,80,10,10,1,100,50,Defensive
+Goblin Shaman,25,2,12,1,15,10,Defensive
+Orc Warchief,50,7,8,1,25,15,Defensive
+High Necromancer,120,8,14,2,250,100,Saboteur
+The Gloom King,200,15,12,1,500,200,Aggressive
