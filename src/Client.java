@@ -78,8 +78,9 @@ public class Client {
             if (stageNumber > 7) { 
                 System.out.println("\n\n!! WARNING: A powerful presence bars your way !!\n");
                 delay(2000);
-
-                Enemy boss = createBossEnemy(worldNumber);
+                
+                // --- REFACTOR --- Pass the pre-loaded enemy list to the boss creation method
+                Enemy boss = createBossEnemy(worldNumber, allEnemies);
                 if (boss == null) {
                     System.err.println("FATAL: Could not create boss for world " + worldNumber);
                     return false;
@@ -131,6 +132,10 @@ public class Client {
             }
             
             System.out.println("\n----------------- Stage " + worldNumber + "-" + stageNumber + " -----------------");
+            // --- NARRATIVE UPGRADE --- Add flavour text for the stage
+            printStagePreamble(worldNumber, stageNumber);
+            delay(1500);
+
             System.out.println("Enemies this stage:");
             for(Enemy e : stageEnemies) {
                 System.out.println("- " + e.getName() + " (HP: " + e.getHealthPoints() + ", Armour: " + e.getArmour() + ")");
@@ -170,6 +175,33 @@ public class Client {
         }
     }
     
+    // --- NARRATIVE UPGRADE --- New method to add atmospheric text.
+    private static void printStagePreamble(int worldNumber, int stageNumber) {
+        String[] world1Ambiance = {"You step into a gnarled forest, the air thick with the scent of moss and goblin mischief.", "A crude wooden watchtower, swarming with bandits, looms ahead.", "The path leads to a dripping cave, echoing with the skittering of unseen things."};
+        String[] world2Ambiance = {"The ground is scorched and cracked. You feel the heat of a Fire Elemental nearby.", "You enter an ancient crypt. The rattling of bones announces the Skeleton Knights.", "A chilling wind blows through the abandoned keep, a known haunt of Shadow Mages."};
+        String[] world3Ambiance = {"A massive, moss-covered Stone Guardian blocks the ancient mountain pass.", "The air crackles with lightning as a Storm Eagle circles overhead.", "You push through the gloom into the throne room of the forgotten king..."};
+        
+        System.out.print("> ");
+        switch (worldNumber) {
+            case 1:
+                System.out.println(world1Ambiance[random.nextInt(world1Ambiance.length)]);
+                break;
+            case 2:
+                System.out.println(world2Ambiance[random.nextInt(world2Ambiance.length)]);
+                break;
+            case 3:
+                 if (stageNumber < 7) {
+                    System.out.println(world3Ambiance[random.nextInt(world3Ambiance.length - 1)]); // Don't use last one for normal stages
+                 } else {
+                    System.out.println(world3Ambiance[2]); // Final boss preamble
+                 }
+                break;
+            default:
+                System.out.println("The path ahead is uncertain, yet you press on.");
+                break;
+        }
+    }
+
     private static void handleTownHub(Player player, Scanner scanner, int worldNumber) {
         System.out.println("\n--- You arrive at a small, fortified outpost. ---");
         // --- UPGRADE --- Reduced healer cost scaling to be more affordable
@@ -209,38 +241,27 @@ public class Client {
         }
     }
 
-    private static Enemy createBossEnemy(int worldNumber) {
+    // --- REFACTOR --- This method is now more efficient, using the pre-loaded enemy list.
+    private static Enemy createBossEnemy(int worldNumber, ArrayList<Enemy> allEnemies) {
         String bossName;
         switch(worldNumber) {
             case 1: bossName = "The Goblin King"; break;
             case 2: bossName = "High Necromancer"; break;
             case 3: bossName = "The Gloom King"; break;
-            default: return null; // Should not happen
+            default: return null;
         }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader("enemyStats.csv"))) {
-            String line;
-            reader.readLine(); 
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts[0].trim().equalsIgnoreCase(bossName)) {
-                    String eName = parts[0].trim();
-                    // Bosses have fixed stats from the CSV, not scaled like regular enemies
-                    int eHp = Integer.parseInt(parts[1].trim());
-                    int eArmour = Integer.parseInt(parts[2].trim());
-                    int eInitiative = Integer.parseInt(parts[3].trim());
-                    double eCurr = Double.parseDouble(parts[5].trim());
-                    double eExp = Double.parseDouble(parts[6].trim());
-                    String eAiType = parts[7].trim();
-                    ArrayList<Ability> enemyAbilities = EnemyAbilityLoader.getAbilitiesForEnemy(eName);
-                    return new Enemy(eName, eHp, eArmour, eInitiative, eCurr, eExp, enemyAbilities, eAiType);
-                }
+        for (Enemy enemyTemplate : allEnemies) {
+            if (enemyTemplate.getName().equalsIgnoreCase(bossName)) {
+                // Use the copy constructor from Enemy.java to create a fresh instance
+                return new Enemy(enemyTemplate);
             }
-        } catch (IOException | NumberFormatException e) {
-            System.err.println("Error creating boss: " + e.getMessage());
         }
+
+        System.err.println("Error creating boss: Could not find '" + bossName + "' in the loaded enemy list.");
         return null;
     }
+
 
     private static Player setupPlayer(Scanner scanner) {
         System.out.print("\nChoose starting difficulty (easy, normal, hard, impossible): ");

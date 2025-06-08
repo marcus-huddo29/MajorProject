@@ -201,7 +201,8 @@ public class Player {
         }
         int actual = Math.max(1, amount - modifiedArmour);
         if(this.playerClass.equals("knight")){
-            gainRage(actual);
+            // --- BALANCE CHANGE --- Halved rage gain from taking damage
+            gainRage(actual / 2);
         }
         this.healthPoints = Math.max(0, this.healthPoints - actual);
     }

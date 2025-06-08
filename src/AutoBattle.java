@@ -140,11 +140,11 @@ public class AutoBattle {
 
             double score = 0.0;
             double avgDamage = (a.getMinDamage() + a.getMaxDamage()) / 2.0;
-
-            // Rule 1: Use defensive/healing abilities if health is critical (below 40%)
-            // Note: This requires abilities with "Heal" or "Guard" status.
+            
+            // --- AI UPGRADE --- Removed reference to "Heal" as players don't have it.
+            // Rule 1: Use defensive abilities if health is critical (below 40%)
             if (player.getHealthPoints() < player.getMaxHealth() * 0.4) {
-                if (a.getStatusInflicted().equalsIgnoreCase("Guard") || a.getStatusInflicted().equalsIgnoreCase("Heal")) {
+                if (a.getStatusInflicted().equalsIgnoreCase("Guard")) {
                     score = 1000; // High priority for survival
                 }
             }

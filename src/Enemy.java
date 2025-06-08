@@ -39,6 +39,24 @@ public class Enemy {
         this.abilities = abilities;
         this.aiType = aiType;
     }
+    
+    // --- REFACTOR --- Added a copy constructor to create fresh bosses from templates
+    public Enemy(Enemy template) {
+        this.name = template.name;
+        this.maxHealth = template.maxHealth;
+        this.healthPoints = template.maxHealth; // Full health
+        this.armour = template.armour;
+        this.initiative = template.initiative;
+        this.currencyDrop = template.currencyDrop;
+        this.experienceDrop = template.experienceDrop;
+        this.aiType = template.aiType;
+        // Create new instances of abilities to avoid sharing cooldowns
+        this.abilities = new ArrayList<>();
+        for (Ability a : EnemyAbilityLoader.getAbilitiesForEnemy(template.name)) {
+            this.abilities.add(AbilityFactory.createAbility(a.getAbilityName()));
+        }
+    }
+
 
     public void takeDamage(int amount) {
         int modifiedArmour = this.armour;
