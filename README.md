@@ -1,226 +1,94 @@
-A Legend in the Making
-Table of Contents
-Introduction
+ Major Project Documentation: A Legend in the Making
+1. Group Contribution Table
+This table outlines the contributions of each team member, as required by the assignment specification for mark allocation. 
 
-Background Story
 
-Features
 
-How to Play
+Name	Percentage Contribution	Modules & Files Contributed	Notes
+Owen	40%	Ability.java, AbilityFactory.java, EnemyAbilityLoader.java, Stage.java, Shop.java, Client.java	Designed and implemented the complete logic for player/enemy abilities from CSV files, stage management, and the item shop functionality.
+Marcus	30%	Player.java, Client.java, README.md	Designed the foundational Player class, the core combat cycle, the initial UML layout, and wrote the project's background story and initial documentation.
+Ken	30%	Enemy.java, Combat.java, Client.java	Built the core Enemy class functionality, including the combat AI logic (chooseBestAbility), data integration from enemyStats.csv, and the turn-based logic in Combat.java. 
 
-Prerequisites
 
-Compilation
+Export to Sheets
+2. Project Overview
+Title: A Legend in the Making
+Topic: This project is an implementation of Topic 1: Masters of MQ: Turn-Based RPG Combat. 
+Introduction: Welcome to "A Legend in the Making," a classic text-based, turn-based RPG built in Java. Players step into the shoes of a lone adventurer to drive back the darkness threatening the realm. Choose your class, battle hordes of monsters, level up your abilities, and face powerful world bosses in a journey to become a true hero. This project demonstrates core object-oriented programming principles and data-driven game design, with game logic and stats loaded dynamically from CSV files.
+3. How to Run the Program
+These instructions explain how to compile and run the project from a terminal, as required by the assignment specification. 
 
-Running the Game
-
-Gameplay Basics
-
-Strategy Guide
-
-General Strategy by Difficulty
-
-Strategy by Class
-
-Project Structure
-
-Source Files
-
-Data Files
-
-Introduction
-Welcome to "A Legend in the Making," a classic text-based, turn-based RPG built in Java. Step into the shoes of a lone adventurer and embark on a quest to drive back the darkness threatening the realm. Choose your class, battle hordes of monsters, level up your abilities, and face powerful world bosses in a journey to become a true hero.
-
-This project is a demonstration of core object-oriented programming principles and data-driven game design, with game logic and stats loaded dynamically from CSV files.
-
-Background Story
-For generations, the kingdom of Eldoria has known peace. But a creeping shadow has begun to fall across the land, a blight that withers crops and emboldens the monstrous creatures of the wild. It started with whispers—tales of goblins growing bolder, of dark beasts stirring in the deep woods, and of a malevolent intelligence guiding their chaos.
-
-Now, the whispers have become a roar. The roads are no longer safe. Villages on the frontier have fallen silent. The Royal Knights are stretched thin, and a sense of dread hangs heavy in the air. Sages and scholars point to a prophecy: when the three ancient seals weaken, a champion must rise to face the encroaching Gloom and its forgotten king.
-
-You are an adventurer, drawn to the heart of the kingdom by tales of danger and the promise of glory. Whether you are a stalwart Knight, a wise Wizard, or a keen-eyed Archer, your path leads to the front lines of this desperate war. The fate of Eldoria rests on your shoulders. Your legend begins now.
-
-Features
-Class-Based System: Choose from three distinct classes, each with a unique resource and playstyle:
-
-Knight: A durable warrior who generates Rage from taking and dealing damage to fuel powerful attacks.
-
-Wizard: A master of the arcane who wields powerful spells by managing a pool of Mana Points (MP).
-
-Archer: A nimble marksman who uses Focus to execute precise and deadly shots.
-
-Turn-Based Tactical Combat: Plan your moves carefully in a strategic, initiative-based combat system.
-
-Dynamic Enemy AI: Enemies make intelligent decisions, choosing to heal allies, buff their team, or exploit player weaknesses.
-
-Deep Progression:
-
-Gain experience to level up, increasing your core stats.
-
-Choose between learning new abilities or upgrading existing ones.
-
-Equip powerful weapons and use consumable items purchased from the shop.
-
-Data-Driven Design: All abilities, character stats, enemy stats, and shop items are loaded from easy-to-edit .csv files, allowing for rapid iteration and balancing.
-
-Robust Status Effects: Inflict or be afflicted by effects like Burn, Poison, Stun, and Guard. A diminishing returns system prevents overpowered stunlocking.
-
-Scaling Difficulty: The game features multiple difficulty settings that adjust enemy stats and mechanics. Enemies also grow stronger as you progress through different worlds.
-
-Town Hub: Between worlds, visit a town hub to heal, shop, and gather narrative clues.
-
-Auto-Battle Mode: A smart auto-battle AI that can handle complex multi-enemy encounters for faster gameplay.
-
-How to Play
-1. Prerequisites
-You need to have the Java Development Kit (JDK) installed on your system to compile and run the game.
-
-2. Compilation
-Navigate to the project's root directory in your terminal.
-
-Make sure all .java files are located in a src folder.
-
-Run the Java compiler:
+Prerequisites: Ensure you have the Java Development Kit (JDK) installed on your system.
+Navigate to Directory: Open a terminal or command prompt and navigate to the project's root directory (the one containing the src folder and the .csv files).
+Compilation: Run the Java compiler to compile all source files from the src directory into the bin directory.
+Bash
 
 javac src/*.java -d bin
-
-This command compiles all .java files from the src directory and places the resulting .class files into a bin (binary) directory.
-
-3. Running the Game
-After compiling, ensure you are still in the project's root directory.
-
-The required .csv files (abilities.csv, playerStats.csv, etc.) must be in the same root directory.
-
-Run the game using the Client class, making sure to include the bin directory in the classpath:
+Execution: Run the game using the Client class, ensuring the bin folder is in the classpath so the compiled files can be found. The required .csv files must be in the root directory.
+Bash
 
 java -cp bin Client
+The game will start in your terminal. Follow the on-screen prompts to begin.
 
-The game will start in your terminal. Follow the on-screen prompts to begin your adventure!
+4. Class Structure & Design (UML Diagram)
+The project is structured around a set of classes that manage the game state, characters, and logic. The design fulfills all scope requirements, including class composition, use of ArrayList, File I/O, and a recursive data structure. 
 
-4. Gameplay Basics
-The Goal: Progress through stages and worlds by defeating enemies. After 7 stages in a world, you will face a powerful boss. Defeat the final boss of World 3 to win the game.
 
-Combat: At the start of a stage, you can choose to fight manually (start), let the AI take over (auto), visit the shop, or use an item. In combat, you'll choose from a list of abilities or items to use on your turn.
+Visual UML Diagram Representation:
 
-Progression: After each fight, you gain currency and experience. After clearing a stage, you will recover some health. When you gain enough experience, you will level up, fully restoring your stats and allowing you to upgrade your abilities.
+[Client] -> [Combat]
+[Client] -> [Shop]
+[Client] -> [Player]
+[Client] -> [Stage]
 
-The Town Hub: After defeating a world boss, you'll arrive at an outpost where you can heal, shop, and prepare for the next world.
+[Stage] o-- "1" [Player]
+[Stage] o-- "many" [Enemy]
 
+[Combat] uses -- [Player]
+[Combat] uses -- [Enemy]
+
+[Player] o-- "many" [Ability]
+[Player] o-- "1" [StatusEffectNode]  // Recursive Structure
+
+[Enemy] o-- "many" [Ability]
+[Enemy] o-- "1" [StatusEffectNode]   // Recursive Structure
+
+[StatusEffectNode] o-- "1" [StatusEffectNode] // Recursive Link
+
+[AbilityFactory] creates --> [Ability]
+[EnemyAbilityLoader] uses --> [AbilityFactory]
+Key Class Definitions:
+
+Client.java: The main entry point and game loop orchestrator.  It handles player setup, progression between stages, and transitions to combat or the shop.
+Player.java / Enemy.java: Manage the state of characters. They contain an ArrayList of Ability objects, satisfying one scope requirement. 
+Stage.java: A container class that holds the state for a single level, including a Player object and an ArrayList<Enemy>. This satisfies the requirements for a class to contain both a single object and an ArrayList of objects of other user-defined classes. 
+StatusEffectNode.java: This class represents a single status effect (like "Poison"). It contains a field, next, which is another StatusEffectNode. This self-referential design forms a linked list, fulfilling the recursive data structure requirement.
+Factory & Loader Classes: AbilityFactory.java and EnemyAbilityLoader.java decouple game logic from data, reading .csv files to create Ability objects dynamically. This fulfills the File I/O requirement. 
+5. Analysis of Methods
+This section provides a detailed analysis of two methods against alternative implementations, focusing on design principles and efficiency, as required for full documentation marks. 
+
+Method 1: Enemy.chooseBestAbility(Player player, List<Enemy> allies)
+Current Implementation: This method uses a switch statement based on the enemy's aiType string ("Aggressive", "Defensive", etc.) to select different logic paths for choosing an ability. This is a straightforward, procedural approach.
+Alternative (Strategy Design Pattern): A more advanced alternative would be to use the Strategy design pattern.
+Define an AIStrategy interface with a method: chooseAbility(...).
+Create concrete classes like AggressiveStrategy and DefensiveStrategy, each implementing the interface.
+The Enemy class would hold an object of this interface (private AIStrategy strategy;) instead of a string. The chooseBestAbility method would then simply delegate the call: return this.strategy.chooseAbility(...).
+Analysis: While the current implementation is simple, it violates the Open/Closed Principle. To add a new AI type, the Enemy class itself must be modified. The Strategy pattern is far more extensible, allowing new AI behaviours to be added by creating new classes without touching existing code. This makes the design more robust and maintainable.
+Method 2: Client.generateStageEnemies(...)
+Current Implementation: This method uses hard-coded List<String> collections within the Client.java source file to define which enemies can appear in each world. It then filters a master enemy list based on these hard-coded lists.
+Alternative (Data-Driven Configuration): A more flexible approach would be to move this configuration into the data files. We could add minWorld and maxWorld columns to enemyStats.csv. The generateStageEnemies method would then read this file and dynamically create the enemy pool by filtering for enemies where the current worldNumber falls between their minWorld and maxWorld.
+Analysis: The current approach mixes configuration data with application logic, making it rigid. The data-driven alternative decouples content from code. A game designer could easily balance the game or adjust enemy placements by simply editing the enemyStats.csv spreadsheet, requiring no code changes. This dramatically improves the development workflow and makes the overall system more modular.
+6. Game Features & Strategy Guide
+Features
+Class-Based System: Choose from three distinct classes: the durable Knight (uses Rage), the arcane Wizard (uses Mana), or the tactical Archer (uses Focus).
+Turn-Based Tactical Combat: Plan your moves carefully in a strategic, initiative-based combat system. 
+Dynamic Enemy AI: Enemies make intelligent decisions, choosing to heal allies, buff their team, or exploit player weaknesses based on their AI type.
+Deep Progression: Gain experience to level up, choose new abilities, and purchase powerful weapons from the shop.
+Data-Driven Design: All abilities, character stats, and shop items are loaded from easy-to-edit .csv files.
+Robust Status Effects: Inflict or be afflicted by effects like Burn, Poison, and Stun, managed by a recursive linked-list structure.
 Strategy Guide
-General Strategy by Difficulty
-Your approach will need to change as you ramp up the difficulty.
-
-Easy: This mode is for learning the ropes and enjoying the story.
-
-Focus: Experiment with different abilities. You can be aggressive without much punishment.
-
-Economy: Spend currency freely on HP potions and weapon upgrades as they become available.
-
-Combat: Auto-battle is highly effective here. Manually, you can focus on using your highest-damage abilities without much concern for resource management.
-
-Normal: A balanced experience that requires some tactical thought.
-
-Focus: Pay attention to enemy types. Prioritise taking out enemies that can heal or apply dangerous status effects (like Stun or Vulnerable).
-
-Economy: Be more deliberate with your spending. Keep a stock of HP potions, but save up for the major weapon upgrades offered in the shop. The Reset Cooldowns item can be a lifesaver in boss fights.
-
-Combat: Don't use your powerful cooldown abilities on weak enemies. Save them for tougher encounters or when you need to burst down a priority target.
-
-Hard: This mode is a significant challenge that punishes mistakes.
-
-Focus: Resource management is key. Wasting MP, Rage, or Focus will lead to defeat. You must understand when to use your big abilities and when to use your basic, resource-building attacks.
-
-Economy: Every coin matters. The Healer in the Town Hub is expensive, so rely on HP potions. Avoid buying temporary attack buffs and save everything for permanent weapon upgrades and a large stock of potions.
-
-Combat: You will often face multiple enemies. You must focus-fire on one enemy at a time to reduce incoming damage as quickly as possible. Spreading damage around is a recipe for disaster. Use status effects like Slow and Stun to control the battlefield.
-
-Impossible: This mode is for true masters of the game and requires near-perfect play.
-
-Focus: Survival is everything. Defensive abilities like the Knight's Guard Stance or the Wizard's Mana Shield are no longer luxuries—they are essential.
-
-Economy: You will likely not be able to afford everything. Prioritise the first weapon upgrade and then hoard potions. You may need to grind earlier stages for extra currency before tackling a boss.
-
-Combat: You must exploit the diminishing returns system. Plan your stun usage carefully. A single wasted stun on a boss could mean the end of your run. Know every enemy's abilities and anticipate their moves. You cannot afford to be surprised.
-
-Strategy by Class
-Knight
-The Knight is a frontline brawler who thrives in the heat of battle. Your core mechanic is Rage, which you gain by dealing and taking damage.
-
-Core Strategy: Be aggressive. You need to be in the fight to build Rage, so don't be afraid to take a few hits. Use your basic Slash to build Rage against weaker enemies, then unleash Power Strike on high-health targets or Shield Bash to stun a dangerous foe.
-
-Leveling Up:
-
-Early Game: Focus on upgrading the damage of Slash and Power Strike.
-
-Mid Game: Whirlwind is an excellent AoE for Hard/Impossible. Guard Stance is a must-have for surviving big boss attacks.
-
-Late Game: Last Stand can give you the turn you need to win an otherwise impossible fight. Choose it if you're struggling with survivability.
-
-Stat Priority: Damage > Cooldown Reduction. The more damage you do, the more Rage you build.
-
-Wizard
-The Wizard is a glass cannon who controls the battlefield from a distance with powerful spells, all dependent on Mana Points (MP).
-
-Core Strategy: Your MP is your lifeblood. Use the free Mana Dart to finish off low-health enemies or when you're low on MP. Your goal is to manage your MP pool so you always have enough for a critical Fireball or a defensive Mana Shield.
-
-Leveling Up:
-
-Early Game: Upgrade Fireball's damage immediately. Learning Arcane Blast early gives you a strong single-target nuke.
-
-Mid Game: Meteor Strike is one of the best AoE abilities in the game and is a priority. Mana Shield is crucial for higher difficulties.
-
-Late Game: Polymorph is the ultimate control spell. Use it on bosses (before they gain too much resistance) or on a dangerous secondary enemy in a multi-enemy fight.
-
-Stat Priority: Status Chance > Damage. A Wizard's power comes from control. Increasing the chance to Burn, Slow, or Stun is often more valuable than raw damage.
-
-Archer
-The Archer is a tactical damage dealer who relies on a regenerating resource, Focus, to deliver high-impact shots.
-
-Core Strategy: Your gameplay is about rhythm. You passively regenerate Focus each turn. Open with a powerful shot like Poison Arrow, then use your basic Arrow Shot for a turn or two to let your Focus recover before using another special ability.
-
-Leveling Up:
-
-Early Game: Poison Arrow is fantastic; upgrading its status chance makes early fights much easier.
-
-Mid Game: Piercing Shot and Rapid Fire offer different tactical options (high damage vs. low cooldown). Volley is a solid AoE choice if you find yourself struggling with groups.
-
-Late Game: Called Shot is your boss-killer. The Vulnerable status it applies will dramatically increase your party's damage output. It's a top-tier ability.
-
-Stat Priority: Damage > Status Chance. As an Archer, your primary role is to eliminate threats quickly. While poison is useful, your main contribution is high, consistent damage.
-
-Project Structure
-The project is organized into source files and data files.
-
-Source Files (src/)
-Client.java: The main entry point of the application. Contains the main game loop, player setup, and high-level game flow logic.
-
-Player.java: Defines the player character, including their stats, abilities, inventory, and class-specific resources.
-
-Enemy.java: Defines enemy characters, including their stats, abilities, and combat AI.
-
-Ability.java: Defines the structure of a single ability, including its damage, cost, cooldown, and effects.
-
-Combat.java: Manages the turn-by-turn logic of a combat encounter, including turn order, action handling, and status updates.
-
-AutoBattle.java: Implements the AI for automatically resolving combat encounters.
-
-Shop.java: Handles the logic for the item shop, including loading items and processing purchases.
-
-AbilityFactory.java: A factory class responsible for creating Ability objects from the abilities.csv data file.
-
-EnemyAbilityLoader.java: Loads and assigns ability sets to enemies from enemy_abilities.csv.
-
-Difficulty.java & DifficultyManager.java: An enum and manager class to handle different game difficulty levels.
-
-Stage.java: A container for the state of a single stage, including the player and the list of enemies.
-
-Data Files (.csv)
-abilities.csv: A database of all abilities in the game.
-
-playerStats.csv: Contains the base stats for each player class.
-
-enemyStats.csv: A database of all base enemy types.
-
-enemy_abilities.csv: Maps which abilities each enemy type can use.
-
-shop.csv: A list of all items available for purchase in the shop.
+Hard Difficulty: Resource management is key. You must focus-fire on one enemy at a time to reduce incoming damage as quickly as possible. Use status effects like Stun to control the battlefield.
+Impossible Difficulty: Survival is everything. Defensive abilities are essential. You must exploit the diminishing returns system on status effects and anticipate every enemy move.
+Knight: Be aggressive to build Rage. Use your basic Slash to build resources, then unleash Power Strike on high-health targets or Shield Bash to stun a dangerous foe.
+Wizard: Your MP is your lifeblood. Use the free Mana Dart to finish off weak enemies and conserve MP for critical spells like Fireball or Meteor Strike.
+Archer: Your gameplay is about rhythm. You passively regenerate Focus. Open with a powerful shot like Poison Arrow, then use basic attacks to recover Focus before using another special ability.

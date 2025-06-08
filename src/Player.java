@@ -1,4 +1,4 @@
-// Player.java
+// src/Player.java
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,7 +33,7 @@ public class Player {
     private final List<Shop.ShopItem> inventory = new ArrayList<>();
     private final List<String> ownedWeapons = new ArrayList<>();
     
-    private final Map<String, Integer> statusEffects = new HashMap<>();
+    private StatusEffectNode statusEffectsHead = null; // Head of the status effects linked list
     private final Map<String, Integer> statusResistance = new HashMap<>();
 
     private int levelsGained = 0;
@@ -161,7 +161,6 @@ public class Player {
                 break;
             case "attack_buff":
                 this.temporaryDamageBuff += item.value;
-                // --- UPGRADE --- Make buff last 3 rounds instead of just the current stage
                 applyStatus("attack_buff", 3);
                 System.out.println("> Used " + item.name + ". Temporary damage increased by " + item.value + " for 3 rounds!");
                 break;
@@ -177,7 +176,6 @@ public class Player {
 
     public int rollInitiative() { 
         int roll = 1 + new Random().nextInt(this.initiativeRange);
-        // --- UPGRADE --- Archer passive: higher chance to act first.
         if (this.playerClass.equals("archer")) {
             System.out.println("> Archer's Swiftness grants an initiative bonus!");
             roll += 3; 
@@ -201,7 +199,6 @@ public class Player {
         }
         int actual = Math.max(1, amount - modifiedArmour);
         if(this.playerClass.equals("knight")){
-            // --- BALANCE CHANGE --- Halved rage gain from taking damage
             gainRage(actual / 2);
         }
         this.healthPoints = Math.max(0, this.healthPoints - actual);
@@ -209,7 +206,7 @@ public class Player {
     
     public void applyStatus(String status, int duration) {
         if (status == null || status.equalsIgnoreCase("None")) return;
-        
+
         if(status.equalsIgnoreCase("stun") && hasStatus("stun_immunity")){
             System.out.println("> " + this.name + " is immune to stun!");
             return;
@@ -222,25 +219,37 @@ public class Player {
             System.out.println("> " + this.name + " resisted the " + status + " effect!");
             return;
         }
+        
+        StatusEffectNode newEffect = new StatusEffectNode(status.toLowerCase(), finalDuration);
+        
+        if (statusEffectsHead != null) {
+            newEffect.next = statusEffectsHead;
+        }
+        statusEffectsHead = newEffect;
 
-        statusEffects.put(status.toLowerCase(), finalDuration);
         statusResistance.put(status.toLowerCase(), timesApplied + 1);
         System.out.println("> " + this.name + " is now affected by " + status + " for " + finalDuration + " turns!");
     }
 
     public boolean hasStatus(String status) {
-        return statusEffects.containsKey(status.toLowerCase());
+        StatusEffectNode current = statusEffectsHead;
+        while (current != null) {
+            if (current.effectName.equalsIgnoreCase(status)) {
+                return true;
+            }
+            current = current.next;
+        }
+        return false;
     }
     
     public void tickStatusEffects() {
-        // --- UPGRADE --- Add class-specific passive resource generation.
         switch(playerClass) {
             case "archer":
                 gainFocus(15);
                 System.out.println("> Passively recovered 15 Focus.");
                 break;
             case "wizard":
-                int manaRegen = (int) (this.maxMp * 0.05); // 5% of max MP
+                int manaRegen = (int) (this.maxMp * 0.05);
                 restoreMp(manaRegen);
                 System.out.println("> Passively recovered " + manaRegen + " MP.");
                 break;
@@ -250,46 +259,48 @@ public class Player {
                 break;
         }
 
+        StatusEffectNode current = statusEffectsHead;
+        StatusEffectNode previous = null;
 
-        List<String> expired = new ArrayList<>();
-        for (Map.Entry<String, Integer> entry : statusEffects.entrySet()) {
-            String status = entry.getKey();
-            int duration = entry.getValue();
-            
-            switch (status) {
+        while (current != null) {
+            switch (current.effectName) {
                 case "poison":
                 case "burn":
                     int dotDamage = (int)(this.maxHealth * 0.05);
                     this.healthPoints = Math.max(0, this.healthPoints - dotDamage);
-                    System.out.println("> " + name + " takes " + dotDamage + " damage from " + status + ".");
+                    System.out.println("> " + name + " takes " + dotDamage + " damage from " + current.effectName + ".");
                     break;
-                // --- UPGRADE --- Handle the new temporary attack buff duration
                 case "attack_buff":
-                     if (duration - 1 <= 0) {
+                     if (current.duration - 1 <= 0) {
                         System.out.println("> Your temporary attack buff has worn off.");
                         resetTemporaryBuffs();
                     }
                     break;
             }
 
-            if (duration - 1 <= 0) {
-                expired.add(status);
+            current.duration--;
+
+            StatusEffectNode nextNode = current.next;
+            if (current.duration <= 0) {
+                System.out.println("> " + current.effectName + " has worn off for " + name + ".");
+                if(current.effectName.equalsIgnoreCase("stun")){
+                    applyStatus("stun_immunity", 2);
+                }
+                
+                if (previous == null) {
+                    statusEffectsHead = nextNode;
+                } else {
+                    previous.next = nextNode;
+                }
             } else {
-                statusEffects.put(status, duration - 1);
+                 previous = current;
             }
-        }
-        
-        for (String status : expired) {
-            statusEffects.remove(status);
-            System.out.println("> " + status + " has worn off for " + name + ".");
-            if(status.equalsIgnoreCase("stun")){
-                applyStatus("stun_immunity", 2);
-            }
+            current = nextNode;
         }
     }
     
     public void clearAllStatusEffects() {
-        statusEffects.clear();
+        statusEffectsHead = null;
         statusResistance.clear();
     }
 
@@ -304,7 +315,6 @@ public class Player {
     public void addCurrency(double amount) { this.currency += amount; }
     public void addExperience(double amount) { this.experience += amount; }
     public void addItemToInventory(Shop.ShopItem item) { inventory.add(item); }
-    // --- UPGRADE --- Modified to only reset temporary damage buff; status effects have their own duration.
     public void resetTemporaryBuffs() { this.temporaryDamageBuff = 0; }
 
     // --- Getters ---

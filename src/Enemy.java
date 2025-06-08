@@ -1,4 +1,4 @@
-// Enemy.java
+// src/Enemy.java
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -23,7 +23,7 @@ public class Enemy {
     private final ArrayList<Ability> abilities;
     private final String aiType;
     
-    private final Map<String, Integer> statusEffects = new HashMap<>();
+    private StatusEffectNode statusEffectsHead = null; // Head of the status effects linked list
     private final Map<String, Integer> statusResistance = new HashMap<>();
     private int temporaryDamageBuff = 0;
 
@@ -40,23 +40,20 @@ public class Enemy {
         this.aiType = aiType;
     }
     
-    // --- REFACTOR --- Added a copy constructor to create fresh bosses from templates
     public Enemy(Enemy template) {
         this.name = template.name;
         this.maxHealth = template.maxHealth;
-        this.healthPoints = template.maxHealth; // Full health
+        this.healthPoints = template.maxHealth;
         this.armour = template.armour;
         this.initiative = template.initiative;
         this.currencyDrop = template.currencyDrop;
         this.experienceDrop = template.experienceDrop;
         this.aiType = template.aiType;
-        // Create new instances of abilities to avoid sharing cooldowns
         this.abilities = new ArrayList<>();
         for (Ability a : EnemyAbilityLoader.getAbilitiesForEnemy(template.name)) {
             this.abilities.add(AbilityFactory.createAbility(a.getAbilityName()));
         }
     }
-
 
     public void takeDamage(int amount) {
         int modifiedArmour = this.armour;
@@ -96,15 +93,13 @@ public class Enemy {
     }
 
     private Ability chooseAggressiveAbility(List<Ability> available) {
-        // Prioritizes the ability with the highest potential average damage.
         return available.stream()
             .filter(a -> !a.getStatusInflicted().equalsIgnoreCase("Heal") && !a.getStatusInflicted().equalsIgnoreCase("Buff"))
             .max(Comparator.comparingInt(a -> (a.getMinDamage() + a.getMaxDamage()) / 2))
-            .orElse(available.get(0)); // Failsafe
+            .orElse(available.get(0));
     }
 
     private Ability chooseDefensiveAbility(List<Ability> available, List<Enemy> allies) {
-        // First, check if any ally (or self) is hurt and needs healing.
         for (Ability ability : available) {
             if (ability.getStatusInflicted().equalsIgnoreCase("Heal")) {
                 boolean someoneNeedsHealing = allies.stream()
@@ -112,7 +107,6 @@ public class Enemy {
                 if (someoneNeedsHealing) return ability;
             }
         }
-        // Second, check if an ally can be buffed.
         for (Ability ability : available) {
              if (ability.getStatusInflicted().equalsIgnoreCase("Buff")) {
                 boolean someoneNeedsBuff = allies.stream()
@@ -120,19 +114,16 @@ public class Enemy {
                 if(someoneNeedsBuff) return ability;
             }
         }
-        // Otherwise, act aggressively.
         return chooseAggressiveAbility(available);
     }
 
     private Ability chooseSaboteurAbility(List<Ability> available, Player player) {
-        // Prioritizes applying a status effect the player doesn't already have.
         for (Ability a : available) {
             String status = a.getStatusInflicted();
             if (status != null && !status.equalsIgnoreCase("None") && !player.hasStatus(status)) {
                 return a; 
             }
         }
-        // If no new status can be applied, act aggressively.
         return chooseAggressiveAbility(available);
     }
     
@@ -176,54 +167,71 @@ public class Enemy {
             return;
         }
 
-        statusEffects.put(status.toLowerCase(), finalDuration);
+        StatusEffectNode newEffect = new StatusEffectNode(status.toLowerCase(), finalDuration);
+        if (statusEffectsHead != null) {
+            newEffect.next = statusEffectsHead;
+        }
+        statusEffectsHead = newEffect;
+
         statusResistance.put(status.toLowerCase(), timesApplied + 1);
         System.out.println("> " + this.name + " is now affected by " + status + " for " + finalDuration + " turns!");
     }
 
     public boolean hasStatus(String status) {
-        return statusEffects.containsKey(status.toLowerCase());
+        StatusEffectNode current = statusEffectsHead;
+        while (current != null) {
+            if (current.effectName.equalsIgnoreCase(status)) {
+                return true;
+            }
+            current = current.next;
+        }
+        return false;
     }
 
     public void tickStatusEffects() {
-        List<String> expired = new ArrayList<>();
-        for (Map.Entry<String, Integer> entry : statusEffects.entrySet()) {
-            String status = entry.getKey();
-            int duration = entry.getValue() - 1;
-
-            if (status.equalsIgnoreCase("buff")) {
-                if (duration <= 0) {
+        StatusEffectNode current = statusEffectsHead;
+        StatusEffectNode previous = null;
+    
+        while (current != null) {
+            if (current.effectName.equalsIgnoreCase("buff")) {
+                if (current.duration - 1 <= 0) {
                     this.temporaryDamageBuff = 0;
                     System.out.println("> " + name + "'s rally buff has worn off.");
                 }
             }
             
-            switch (status) {
+            switch (current.effectName) {
                 case "poison":
                 case "burn":
                     int dotDamage = (int)(this.maxHealth * 0.05);
                     this.healthPoints = Math.max(0, this.healthPoints - dotDamage);
-                    System.out.println("> " + name + " takes " + dotDamage + " damage from " + status + ".");
+                    System.out.println("> " + name + " takes " + dotDamage + " damage from " + current.effectName + ".");
                     break;
             }
-
-            if (duration <= 0) {
-                expired.add(status);
+    
+            current.duration--;
+    
+            StatusEffectNode nextNode = current.next;
+            if (current.duration <= 0) {
+                System.out.println("> " + current.effectName + " has worn off for " + name + ".");
+                if(current.effectName.equalsIgnoreCase("stun")){
+                    applyStatus("stun_immunity", 2);
+                }
+    
+                if (previous == null) {
+                    statusEffectsHead = nextNode;
+                } else {
+                    previous.next = nextNode;
+                }
             } else {
-                statusEffects.put(status, duration);
+                previous = current;
             }
-        }
-        for (String status : expired) {
-            statusEffects.remove(status);
-            System.out.println("> " + status + " has worn off for " + name + ".");
-            if(status.equalsIgnoreCase("stun")){
-                applyStatus("stun_immunity", 2);
-            }
+            current = nextNode;
         }
     }
     
     public void clearAllStatusEffects() {
-        statusEffects.clear();
+        statusEffectsHead = null;
         statusResistance.clear();
         temporaryDamageBuff = 0;
     }
