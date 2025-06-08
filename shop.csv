@@ -1,9 +1,12 @@
-itemName,itemType,value,cost,description,classRestriction
-Lesser HP Potion,hp,25,5,Restores 25% of max HP,all
-HP Potion,hp,50,10,Restores 50% of max HP,all
-MP Potion,mp,50,12,Restores 50% of max MP,wizard
-Reset Cooldowns,clear_cd,0,25,Instantly resets all ability cooldowns,all
-Attack Buff,attack_buff,3,20,+3 temporary damage for the current stage,all
-Knight's Sword,weapon,4,40,Permanent +4 damage,knight
-Archer's Bow,weapon,4,40,Permanent +4 damage,archer
-Wizard's Staff,weapon,4,40,Permanent +4 damage,wizard
+itemName,itemType,value,cost,description,classRestriction,levelRequirement
+Lesser HP Potion,hp,25,5,Restores 25% of max HP,all,0
+HP Potion,hp,50,10,Restores 50% of max HP,all,3
+MP Potion,mp,50,12,Restores 50% of max MP,wizard,2
+Reset Cooldowns,clear_cd,0,25,Instantly resets all ability cooldowns,all,5
+Attack Buff,attack_buff,3,20,+3 temporary damage for the current stage,all,4
+Knight's Sword,weapon,4,40,Permanent +4 damage,knight,2
+Archer's Bow,weapon,4,40,Permanent +4 damage,archer,2
+Wizard's Staff,weapon,4,40,Permanent +4 damage,wizard,2
+Legendary Sword,weapon,8,100,Permanent +8 damage,knight,8
+Legendary Bow,weapon,8,100,Permanent +8 damage,archer,8
+Legendary Staff,weapon,8,100,Permanent +8 damage,wizard,8

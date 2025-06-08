@@ -1,38 +1,26 @@
 import java.util.ArrayList;
-import java.util.List;
 
 public class AutoBattle {
 
-    /**
-     * A simple helper to pause execution, making the auto-battle log easier to read.
-     * @param ms Milliseconds to pause for.
-     */
     private static void delay(int ms) {
         try {
             Thread.sleep(ms);
-        } catch (InterruptedException ignored) {
-            // This is acceptable in a simple game like this.
-        }
+        } catch (InterruptedException ignored) {}
     }
 
     /**
      * Runs an entire combat encounter automatically.
-     * @param player The player character.
-     * @param enemies The list of enemies in this encounter.
      */
     public static void runStage(Player player, ArrayList<Enemy> enemies) {
         System.out.println("\n--- AUTO-BATTLE INITIATED ---");
-        player.setAutoMode(true);
         
         for (Enemy currentEnemy : enemies) {
-            if (player.getHealthPoints() <= 0) {
-                break; // Player was defeated in a previous fight.
-            }
+            if (player.getHealthPoints() <= 0) break;
 
             System.out.println("\nNext Opponent: " + currentEnemy.getName());
-            System.out.printf("Player Stats – HP: %d/%d | MP: %d/%d\n", player.getHealthPoints(), player.getMaxHealth(), player.getMp(), player.getMaxMp());
-
-            // Reset cooldowns for the new fight.
+            
+            player.clearAllStatusEffects();
+            currentEnemy.clearAllStatusEffects();
             for (Ability a : player.getAbilities()) a.resetCooldown();
             for (Ability a : currentEnemy.getAbilities()) a.resetCooldown();
 
@@ -41,17 +29,27 @@ public class AutoBattle {
                 
                 // --- Player's Turn ---
                 System.out.println("\n--- Player's Turn (Auto) ---");
-                performPlayerTurn(player, currentEnemy);
-                if (currentEnemy.getHealthPoints() <= 0) continue; // Enemy defeated.
+                player.tickStatusEffects();
+                if(player.getHealthPoints() <= 0) continue;
+                if (!player.hasStatus("stun")) {
+                     performPlayerTurn(player, currentEnemy);
+                } else {
+                     System.out.println("> " + player.getName() + " is stunned and cannot act!");
+                }
+                if (currentEnemy.getHealthPoints() <= 0) continue;
     
                 // --- Enemy's Turn ---
                 System.out.println("\n--- Enemy's Turn (Auto) ---");
-                performEnemyTurn(player, currentEnemy);
+                currentEnemy.tickStatusEffects();
+                if(currentEnemy.getHealthPoints() <= 0) continue;
+                if (!currentEnemy.hasStatus("stun")) {
+                    performEnemyTurn(player, currentEnemy);
+                } else {
+                    System.out.println("> " + currentEnemy.getName() + " is stunned and cannot act!");
+                }
             }
 
-            if (player.getHealthPoints() <= 0) {
-                break; // Stop the stage if the player is defeated.
-            } else {
+            if (player.getHealthPoints() > 0) {
                 System.out.println("\n> " + currentEnemy.getName() + " defeated!");
             }
         }
@@ -59,15 +57,10 @@ public class AutoBattle {
         if (player.getHealthPoints() <= 0) {
             System.out.println("\nAuto-Battle Result: " + player.getName() + " was defeated...");
         }
-        player.setAutoMode(false);
     }
     
-    /**
-     * Contains the logic for the player's automated action.
-     */
     private static void performPlayerTurn(Player player, Enemy currentEnemy) {
-        // AI selects the best ability to use.
-        Ability bestAbility = selectBestAbility(player, currentEnemy);
+        Ability bestAbility = selectBestPlayerAbility(player, currentEnemy);
         
         if (bestAbility != null) {
             delay(500);
@@ -76,16 +69,23 @@ public class AutoBattle {
             
             int baseDmg = bestAbility.getRandomDamage();
             int extraDmg = player.getPermanentDamageBonus() + player.getTemporaryDamageBuff();
-            int totalDmg = baseDmg + extraDmg;
+            double difficultyMultiplier = DifficultyManager.getDifficulty().getPlayerDamageMultiplier();
+            int totalDmg = (int) ((baseDmg + extraDmg) * difficultyMultiplier);
             
-            currentEnemy.takeDamage(totalDmg);
-            System.out.println("> Auto dealt " + totalDmg + " damage to " + currentEnemy.getName() + " (HP left: " + currentEnemy.getHealthPoints() + ")");
+            if (totalDmg > 0) {
+                currentEnemy.takeDamage(totalDmg);
+                System.out.println("> Auto dealt " + totalDmg + " damage to " + currentEnemy.getName() + " (HP left: " + currentEnemy.getHealthPoints() + ")");
+            }
+            
+            if(Math.random() < bestAbility.getStatusChance()){
+                currentEnemy.applyStatus(bestAbility.getStatusInflicted(), 3);
+            }
             
             bestAbility.use();
             
-            // Handle MP cost for Wizards
             if ("wizard".equalsIgnoreCase(player.getPlayerClass())) {
-                int mpCost = bestAbility.getAbilityName().equals("Mana Dart") ? 0 : bestAbility.getMinDamage();
+                int mpCost = (int)(bestAbility.getMinDamage() * 0.8);
+                if(bestAbility.getAbilityName().equals("Mana Dart")) mpCost = 0;
                 player.reduceMp(mpCost);
             }
 
@@ -93,28 +93,28 @@ public class AutoBattle {
             System.out.println("> Auto: " + player.getName() + " has no abilities ready.");
         }
 
-        // Tick cooldowns for all abilities at the end of the turn.
         for (Ability a : player.getAbilities()) a.tickCooldown();
     }
 
     /**
-     * AI logic to select the most efficient ability based on damage, cooldown, and enemy health.
+     * UPDATED: Improved AI logic to select the most efficient ability.
      * @return The best Ability to use, or null if none are usable.
      */
-    private static Ability selectBestAbility(Player player, Enemy enemy) {
+    private static Ability selectBestPlayerAbility(Player player, Enemy enemy) {
         Ability bestAbility = null;
-        int bestScore = -1;
+        double bestScore = -1;
 
         for (Ability a : player.getAbilities()) {
-            int mpCost = "wizard".equalsIgnoreCase(player.getPlayerClass()) && !a.getAbilityName().equals("Mana Dart") ? a.getMinDamage() : 0;
+            int mpCost = "wizard".equalsIgnoreCase(player.getPlayerClass()) ? (int)(a.getMinDamage() * 0.8) : 0;
+            if (a.getAbilityName().equals("Mana Dart")) mpCost = 0;
             
             if (a.isReady() && player.getMp() >= mpCost) {
-                // Score considers damage efficiency (damage per turn, factoring in cooldown).
-                int score = a.getMaxDamage() / (a.getCooldown() + 1);
+                // Score is based on average damage.
+                double score = (double)(a.getMinDamage() + a.getMaxDamage()) / 2.0;
 
-                // If the ability is massive overkill, reduce its score significantly to save it for tougher enemies.
+                // If the ability is massive overkill, reduce its score to save it.
                 if (a.getMinDamage() > enemy.getHealthPoints()) {
-                   score /= 2;
+                   score *= 0.5;
                 }
 
                 if (score > bestScore) {
@@ -124,61 +124,42 @@ public class AutoBattle {
             }
         }
         
-        // Fallback to the first available ability if no "best" was found (e.g., all scores were 0).
+        // Fallback to the first available ability if no "best" was found.
         if (bestAbility == null) {
             for (Ability a : player.getAbilities()) {
                  int mpCost = "wizard".equalsIgnoreCase(player.getPlayerClass()) && !a.getAbilityName().equals("Mana Dart") ? a.getMinDamage() : 0;
                  if (a.isReady() && player.getMp() >= mpCost) {
-                    bestAbility = a;
-                    break;
+                    return a;
                  }
             }
         }
         return bestAbility;
     }
 
-    /**
-     * Contains the logic for the enemy's automated action.
-     */
     private static void performEnemyTurn(Player player, Enemy enemy) {
-        if (enemy.isStunned()) {
-            System.out.println("> " + enemy.getName() + " is stunned and cannot act!");
-            enemy.setStunned(false); // Stun wears off.
-            return;
-        }
-
-        ArrayList<Ability> enemyAbilities = enemy.getAbilities();
-        if (enemyAbilities.isEmpty()) {
-            System.out.println("> " + enemy.getName() + " has no abilities!");
-            return;
-        }
-        
-        // Simple AI: Choose a random usable ability.
-        Ability chosenEnemyAbility = null;
-        java.util.Collections.shuffle(enemyAbilities); // Randomize ability order
-        for(Ability a : enemyAbilities) {
-            if (a.isReady()) {
-                chosenEnemyAbility = a;
-                break;
-            }
-        }
+        Ability chosenEnemyAbility = enemy.chooseBestAbility(player);
 
         if (chosenEnemyAbility != null) {
             delay(500);
             int baseDamage = chosenEnemyAbility.getRandomDamage();
-            // Apply difficulty multiplier.
             double mult = DifficultyManager.getDifficulty().getEnemyDamageMultiplier();
             int finalDamage = (int) Math.round(baseDamage * mult);
             
             System.out.println("> " + enemy.getName() + " uses " + chosenEnemyAbility.getAbilityName() + "!");
-            player.takeDamage(finalDamage);
+            if(finalDamage > 0) {
+                 player.takeDamage(finalDamage);
+                 System.out.println("> Auto-deals " + finalDamage + " damage to " + player.getName() + " (HP left: " + player.getHealthPoints() + ")");
+            }
+
+            if(Math.random() < chosenEnemyAbility.getStatusChance()){
+                player.applyStatus(chosenEnemyAbility.getStatusInflicted(), 3);
+            }
+           
             chosenEnemyAbility.use();
-            System.out.println("> Auto-deals " + finalDamage + " damage to " + player.getName() + " (HP left: " + player.getHealthPoints() + ")");
         } else {
-            System.out.println("> " + enemy.getName() + " tried to act, but all abilities are on cooldown.");
+            System.out.println("> " + enemy.getName() + " has no abilities ready.");
         }
 
-        // Tick cooldowns for all abilities at the end of the turn.
         for (Ability a : enemy.getAbilities()) a.tickCooldown();
     }
 }

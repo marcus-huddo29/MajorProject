@@ -18,7 +18,6 @@ public class Player {
     private double currency;
     private double experience;
     
-    // Refactored damage bonuses for clarity.
     private int permanentDamageBonus; // From weapons
     private int temporaryDamageBuff;  // From consumables
 
@@ -26,8 +25,10 @@ public class Player {
     private final List<Shop.ShopItem> inventory = new ArrayList<>();
     private final List<String> ownedWeapons = new ArrayList<>();
     
+    // --- NEW: Status Effect Handling ---
+    private final Map<String, Integer> statusEffects = new HashMap<>(); // Key: status name, Value: duration
+
     private int levelsGained = 0;
-    private int guardRounds = 0; // For "Guard Stance" like abilities
     private boolean autoMode = false;
 
     // A map to hold abilities that can be learned on level-up, specific to each class.
@@ -35,7 +36,7 @@ public class Player {
     static {
         LEVEL_UP_POOL.put("knight", Arrays.asList(
             new Ability("Whirlwind", 10, 15, "None", 3),
-            new Ability("Guard Stance", 0, 0, "Block", 4),
+            new Ability("Guard Stance", 0, 0, "Guard", 4), // Changed to "Guard" status
             new Ability("Last Stand", 0, 0, "Invulnerable", 6)
         ));
         LEVEL_UP_POOL.put("archer", Arrays.asList(
@@ -51,32 +52,35 @@ public class Player {
     }
 
     /**
-     * Constructor for a new Player. Initializes stats and abilities based on class.
+     * UPDATED Constructor for a new Player. Initializes stats from parameters (loaded from CSV).
      */
-    public Player(String name, String playerClass) {
+    public Player(String name, String playerClass, int maxHealth, int armour, int initiative, int maxMp) {
         this.name = name;
         this.playerClass = playerClass.toLowerCase();
         this.abilities = new ArrayList<>();
         this.permanentDamageBonus = 0;
         this.temporaryDamageBuff = 0;
         
-        // Initialize stats and starting abilities based on the chosen class.
+        // Stats are now passed in directly from Client.java after being read from CSV.
+        this.maxHealth = maxHealth;
+        this.armour = armour;
+        this.initiativeRange = initiative;
+        this.maxMp = maxMp;
+
+        // Initialize starting abilities based on the chosen class.
         switch (this.playerClass) {
             case "wizard":
-                this.maxHealth = 30; this.armour = 1; this.initiativeRange = 8; this.maxMp = 60;
                 abilities.add(new Ability("Fireball", 8, 12, "Burn", 2));
                 abilities.add(new Ability("Ice Lance", 4, 8, "Slow", 1));
                 abilities.add(new Ability("Arcane Blast", 12, 15, "None", 3));
-                abilities.add(new Ability("Mana Dart", 2, 4, "None", 0)); // Basic, no-cost attack.
+                abilities.add(new Ability("Mana Dart", 2, 4, "None", 0));
                 break;
             case "archer":
-                this.maxHealth = 35; this.armour = 2; this.initiativeRange = 12; this.maxMp = 0;
                 abilities.add(new Ability("Arrow Shot", 5, 10, "None", 0));
                 abilities.add(new Ability("Poison Arrow", 3, 7, "Poison", 2));
                 abilities.add(new Ability("Volley", 15, 25, "None", 4));
                 break;
             case "knight":
-                this.maxHealth = 40; this.armour = 3; this.initiativeRange = 10; this.maxMp = 0;
                 abilities.add(new Ability("Slash", 6, 10, "None", 0));
                 abilities.add(new Ability("Shield Bash", 4, 8, "Stun", 2));
                 abilities.add(new Ability("Power Strike", 15, 20, "None", 3));
@@ -86,22 +90,17 @@ public class Player {
         this.mp = this.maxMp;
     }
     
-    /**
-     * Handles the logic for leveling up the player.
-     */
     public void performLevelUp() {
-        final double THRESHOLD = 20.0 + (levelsGained * 5); // Experience requirement increases with each level.
+        final double THRESHOLD = 20.0 + (levelsGained * 5);
         if (this.experience < THRESHOLD) return;
         
         this.experience -= THRESHOLD;
         this.levelsGained++;
         
-        // Apply stat increases.
         this.maxHealth += 5;
         this.armour += 1;
         this.initiativeRange += 1;
         
-        // Fully restore health and mana on level up.
         this.healthPoints = this.maxHealth;
         this.mp = this.maxMp;
         
@@ -111,24 +110,15 @@ public class Player {
         System.out.println("*******************************************");
     }
 
-    /**
-     * Checks if the player has enough experience to level up.
-     * @return true if experience is sufficient, false otherwise.
-     */
     public boolean canLevelUp() {
         final double THRESHOLD = 20.0 + (levelsGained * 5);
         return this.experience >= THRESHOLD;
     }
 
-    /**
-     * Gets a list of new abilities the player can learn, filtering out ones they already know.
-     * @return A list of new, learnable abilities.
-     */
     public List<Ability> getNewLevelUpAbilities() {
         List<Ability> potential = LEVEL_UP_POOL.getOrDefault(this.playerClass, List.of());
         List<Ability> newOptions = new ArrayList<>();
         for (Ability a : potential) {
-            // Check if the player already knows an ability with the same name.
             boolean known = this.abilities.stream().anyMatch(owned -> owned.getAbilityName().equals(a.getAbilityName()));
             if (!known) {
                 newOptions.add(a);
@@ -137,69 +127,109 @@ public class Player {
         return newOptions;
     }
     
-    /**
-     * Handles the logic for using an item from the inventory.
-     * @param inventoryIndex The index of the item in the inventory list.
-     * @return true if the item was successfully used.
-     */
     public boolean useInventoryItem(int inventoryIndex) {
         if (inventoryIndex < 0 || inventoryIndex >= inventory.size()) return false;
         
         Shop.ShopItem item = inventory.remove(inventoryIndex);
-        System.out.println(); // Add spacing for clarity.
+        System.out.println();
         
         switch(item.type) {
             case "hp":
                 int healAmount = (int) Math.round(this.maxHealth * item.value / 100.0);
                 heal(healAmount);
-                System.out.println("> Used " + item.name + " and restored " + healAmount + " HP (" + item.value + "% of max).");
+                System.out.println("> Used " + item.name + " and restored " + healAmount + " HP.");
                 break;
             case "mp":
                 int mpAmount = (int) Math.round(this.maxMp * item.value / 100.0);
                 restoreMp(mpAmount);
-                System.out.println("> Used " + item.name + " and restored " + mpAmount + " MP (" + item.value + "% of max).");
+                System.out.println("> Used " + item.name + " and restored " + mpAmount + " MP.");
                 break;
             case "clear_cd":
-                for (Ability a : abilities) {
-                    a.resetCooldown();
-                }
-                System.out.println("> Used " + item.name + ". All ability cooldowns have been reset!");
+                for (Ability a : abilities) a.resetCooldown();
+                System.out.println("> Used " + item.name + ". All ability cooldowns reset!");
                 break;
             case "attack_buff":
-                // This now correctly adds to a temporary buff.
                 this.temporaryDamageBuff += item.value;
-                System.out.println("> Used " + item.name + ". Your temporary damage has been increased by " + item.value + "!");
+                System.out.println("> Used " + item.name + ". Temporary damage increased by " + item.value + "!");
                 break;
-            default:
-                // Fallback for any other item types.
-                System.out.println("> Used " + item.name + ".");
         }
         return true;
     }
     
-    /**
-     * Applies a permanent damage bonus from equipping a weapon.
-     * @param weapon The weapon item from the shop.
-     */
     public void equipWeapon(Shop.ShopItem weapon) {
         this.permanentDamageBonus += weapon.value;
         this.ownedWeapons.add(weapon.name);
-        System.out.println("> You equipped the " + weapon.name + ", permanently increasing your damage by " + weapon.value + "!");
+        System.out.println("> Equipped " + weapon.name + ", permanently increasing damage by " + weapon.value + "!");
     }
 
-    public int rollInitiative() { return 1 + new Random().nextInt(this.initiativeRange); }
+    public int rollInitiative() { 
+        int roll = 1 + new Random().nextInt(this.initiativeRange);
+        if (hasStatus("Slow")) {
+            System.out.println("> " + name + " is slowed, rolling with disadvantage.");
+            roll = Math.min(roll, 1 + new Random().nextInt(this.initiativeRange));
+        }
+        return roll;
+    }
     
     public void takeDamage(int amount) {
-        if (hasGuard()) {
-            System.out.println("> " + name + " blocks all damage with Guard Stance!");
-            guardRounds--;
+        if (hasStatus("Guard") || hasStatus("Invulnerable")) {
+            System.out.println("> " + name + " blocks all incoming damage!");
             return;
         }
-        int actual = Math.max(1, amount - this.armour);
+        int modifiedArmour = this.armour;
+        if (hasStatus("Vulnerable")) {
+            System.out.println("> " + name + " is vulnerable, taking extra damage!");
+            modifiedArmour /= 2;
+        }
+        int actual = Math.max(1, amount - modifiedArmour);
         this.healthPoints = Math.max(0, this.healthPoints - actual);
     }
     
-    public boolean hasGuard() { return guardRounds > 0; }
+    // --- NEW: Status Effect Methods ---
+    public void applyStatus(String status, int duration) {
+        if (status == null || status.equalsIgnoreCase("None")) return;
+        statusEffects.put(status.toLowerCase(), duration);
+        System.out.println("> " + this.name + " is now affected by " + status + " for " + duration + " turns!");
+    }
+
+    public boolean hasStatus(String status) {
+        return statusEffects.containsKey(status.toLowerCase());
+    }
+    
+    public void tickStatusEffects() {
+        List<String> expired = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : statusEffects.entrySet()) {
+            String status = entry.getKey();
+            int duration = entry.getValue();
+            
+            // Handle per-turn effects
+            switch (status) {
+                case "poison":
+                case "burn":
+                    int dotDamage = (int)(this.maxHealth * 0.05); // 5% max HP per turn
+                    this.healthPoints = Math.max(0, this.healthPoints - dotDamage);
+                    System.out.println("> " + name + " takes " + dotDamage + " damage from " + status + ".");
+                    break;
+            }
+
+            // Decrement duration
+            if (duration - 1 <= 0) {
+                expired.add(status);
+            } else {
+                statusEffects.put(status, duration - 1);
+            }
+        }
+        
+        for (String status : expired) {
+            statusEffects.remove(status);
+            System.out.println("> " + status + " has worn off for " + name + ".");
+        }
+    }
+    
+    public void clearAllStatusEffects() {
+        statusEffects.clear();
+    }
+
     public void heal(int amount) { this.healthPoints = Math.min(this.healthPoints + amount, this.maxHealth); }
     public void restoreMp(int amount) { this.mp = Math.min(this.maxMp, this.mp + amount); }
     public void reduceMp(int amount) { this.mp = Math.max(0, this.mp - amount); }
@@ -208,7 +238,7 @@ public class Player {
     public void addItemToInventory(Shop.ShopItem item) { inventory.add(item); }
     public void resetTemporaryBuffs() { this.temporaryDamageBuff = 0; }
 
-    // --- Getters and Setters ---
+    // --- Getters ---
     public String getName() { return this.name; }
     public String getPlayerClass() { return this.playerClass; }
     public int getHealthPoints() { return this.healthPoints; }
@@ -225,5 +255,4 @@ public class Player {
     public int getLevelsGained() { return levelsGained; }
     public boolean isAutoMode() { return autoMode; }
     public void setAutoMode(boolean autoMode) { this.autoMode = autoMode; }
-    public void setGuardRounds(int r) { guardRounds = r; }
 }
