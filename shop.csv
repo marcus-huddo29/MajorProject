@@ -1,9 +1,9 @@
 itemName,itemType,value,cost,description,classRestriction,levelRequirement
-Lesser HP Potion,hp,40,10,Restores 40% of max HP,all,0
+Lesser HP Potion,hp,40,8,Restores 40% of max HP,all,0
 HP Potion,hp,60,25,Restores 60% of max HP,all,3
 MP Potion,mp,50,20,Restores 50% of max MP,wizard,2
-Reset Cooldowns,clear_cd,0,40,Instantly resets all ability cooldowns,all,5
-Attack Buff,attack_buff,3,30,+3 temporary damage for the current stage,all,4
+Reset Cooldowns,clear_cd,0,25,Instantly resets all ability cooldowns,all,5
+Attack Buff,attack_buff,3,20,+3 temporary damage for 3 rounds,all,4
 Knight's Sword,weapon,4,75,Permanent +4 damage,knight,2
 Archer's Bow,weapon,4,75,Permanent +4 damage,archer,2
 Wizard's Staff,weapon,4,75,Permanent +4 damage,wizard,2

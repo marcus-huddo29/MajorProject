@@ -16,7 +16,9 @@ public class AutoBattle {
     public static void runStage(Player player, ArrayList<Enemy> enemies) {
         System.out.println("\n--- AUTO-BATTLE INITIATED ---");
         
+        // --- UPGRADE --- Reset temp buffs and cooldowns at start of auto-battle
         player.clearAllStatusEffects();
+        player.resetTemporaryBuffs();
         for (Ability a : player.getAbilities()) a.resetCooldown();
         for (Enemy e : enemies) {
             e.clearAllStatusEffects();
@@ -68,10 +70,12 @@ public class AutoBattle {
             delay(500);
             
             if(bestAbility.getTargetType().equalsIgnoreCase("All")){
-                for(Enemy target : enemies){
-                    if(target.getHealthPoints() > 0) applyAutoAbility(player, bestAbility, target);
+                List<Enemy> livingEnemies = enemies.stream().filter(e -> e.getHealthPoints() > 0).collect(Collectors.toList());
+                for(Enemy target : livingEnemies){
+                    applyAutoAbility(player, bestAbility, target);
                 }
             } else {
+                // --- UPGRADE --- AI now targets the lowest HP enemy
                 Enemy target = enemies.stream()
                                       .filter(e -> e.getHealthPoints() > 0)
                                       .min(Comparator.comparingInt(Enemy::getHealthPoints))
@@ -81,8 +85,10 @@ public class AutoBattle {
             
             bestAbility.use();
             int cost = bestAbility.getMpCost();
+            // --- UPGRADE --- Uses correct resource based on class
             switch (player.getPlayerClass()) {
                 case "wizard": player.reduceMp(cost); break;
+                // In auto-battle, knight and archer costs are resource costs, not generators
                 case "knight": player.spendRage(cost); break;
                 case "archer": player.spendFocus(cost); break;
             }
@@ -105,38 +111,90 @@ public class AutoBattle {
         
         if(Math.random() < ability.getStatusChance()){
             target.applyStatus(ability.getStatusInflicted(), 3);
+            if (target.getHealthPoints() <= 0) {
+                System.out.println("> " + target.getName() + " was defeated!");
+            }
         }
     }
 
+    // --- UPGRADE --- Completely new, smarter AI logic
     private static Ability selectBestPlayerAbility(Player player, ArrayList<Enemy> enemies) {
-        Ability bestAbility = null;
-        double bestScore = -1;
         List<Enemy> livingEnemies = enemies.stream().filter(e -> e.getHealthPoints() > 0).collect(Collectors.toList());
+        if (livingEnemies.isEmpty()) return null;
+
+        Ability bestAbility = null;
+        double bestScore = -1.0;
 
         for (Ability a : player.getAbilities()) {
             if (!a.isReady()) continue;
 
+            // Check if player can afford the ability
             int cost = a.getMpCost();
             boolean canAfford = false;
             switch(player.getPlayerClass()){
-                case "wizard": if(player.getMp() >= cost) canAfford = true; break;
-                case "knight": if(player.getRage() >= cost) canAfford = true; break;
-                case "archer": if(player.getFocus() >= cost) canAfford = true; break;
+                case "wizard": canAfford = player.getMp() >= cost; break;
+                case "knight": canAfford = player.getRage() >= cost; break;
+                case "archer": canAfford = player.getFocus() >= cost; break;
             }
             if(!canAfford) continue;
 
-            double score = (double)(a.getMinDamage() + a.getMaxDamage()) / 2.0;
-            if(a.getTargetType().equalsIgnoreCase("All")) {
-                score *= Math.min(livingEnemies.size(), 3);
+            double score = 0.0;
+            double avgDamage = (a.getMinDamage() + a.getMaxDamage()) / 2.0;
+
+            // Rule 1: Use defensive/healing abilities if health is critical (below 40%)
+            // Note: This requires abilities with "Heal" or "Guard" status.
+            if (player.getHealthPoints() < player.getMaxHealth() * 0.4) {
+                if (a.getStatusInflicted().equalsIgnoreCase("Guard") || a.getStatusInflicted().equalsIgnoreCase("Heal")) {
+                    score = 1000; // High priority for survival
+                }
+            }
+
+            // Rule 2: Evaluate offensive abilities
+            if (a.getTargetType().equalsIgnoreCase("All")) {
+                // AoE is better with more targets
+                if (livingEnemies.size() >= 2) {
+                    score = avgDamage * livingEnemies.size();
+                } else {
+                    score = avgDamage * 0.5; // Penalize using AoE on a single target
+                }
+            } else {
+                // Single target ability
+                score = avgDamage;
+                // Prioritize finishing off a low-health enemy
+                for (Enemy e : livingEnemies) {
+                    if (e.getHealthPoints() < score) {
+                        score += 50; // Add a bonus for securing a kill
+                    }
+                }
             }
             
+            // Rule 3: Add value for applying useful status effects
+            if (!a.getStatusInflicted().equalsIgnoreCase("None") && !a.getStatusInflicted().equalsIgnoreCase("Heal")) {
+                score *= 1.2; // 20% score bonus for abilities with status effects
+            }
+
+            // Rule 4: Penalize overkill with high-cooldown abilities
+            if (a.getCooldown() > 3 && livingEnemies.size() == 1 && livingEnemies.get(0).getHealthPoints() < avgDamage) {
+                score *= 0.1; // Greatly reduce score if it's an unnecessary finisher
+            }
+
             if (score > bestScore) {
                 bestScore = score;
                 bestAbility = a;
             }
         }
+        
+        // Failsafe: if no ability scored well (e.g., only high-cost ones left), find the cheapest usable one.
+        if (bestAbility == null) {
+            bestAbility = player.getAbilities().stream()
+                .filter(a -> a.isReady() && a.getMpCost() == 0)
+                .findFirst()
+                .orElse(null);
+        }
+
         return bestAbility;
     }
+
 
     private static void performEnemyTurn(Player player, Enemy enemy, ArrayList<Enemy> allEnemies) {
         Ability chosenEnemyAbility = enemy.chooseBestAbility(player, allEnemies);
@@ -160,7 +218,25 @@ public class AutoBattle {
                     player.applyStatus(chosenEnemyAbility.getStatusInflicted(), 3);
                 }
             } else {
-                 System.out.println("> " + enemy.getName() + " uses a support ability.");
+                 // --- UPGRADE --- Add logic for AI healing/buffing its allies
+                 if (effect.equalsIgnoreCase("Heal")) {
+                    Enemy targetToHeal = allEnemies.stream()
+                        .filter(e -> e.getHealthPoints() > 0 && (double)e.getHealthPoints() / e.getMaxHealth() < 0.6)
+                        .min(Comparator.comparingInt(Enemy::getHealthPoints)).orElse(enemy); // Heal self if no other target
+                    
+                    int healAmount = chosenEnemyAbility.getMaxDamage();
+                    targetToHeal.heal(healAmount);
+                    System.out.println("> It healed " + targetToHeal.getName() + " for " + healAmount + " HP!");
+
+                 } else if (effect.equalsIgnoreCase("Buff")) {
+                     Enemy targetToBuff = allEnemies.stream()
+                        .filter(e -> e.getHealthPoints() > 0 && e.getTemporaryDamageBuff() == 0)
+                        .findFirst().orElse(enemy); // Buff self if no other target
+
+                    int buffAmount = chosenEnemyAbility.getMaxDamage();
+                    targetToBuff.applyBuff(buffAmount);
+                    System.out.println("> It granted " + targetToBuff.getName() + " a +" + buffAmount + " damage buff!");
+                 }
             }
            
             chosenEnemyAbility.use();

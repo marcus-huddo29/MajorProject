@@ -161,7 +161,9 @@ public class Player {
                 break;
             case "attack_buff":
                 this.temporaryDamageBuff += item.value;
-                System.out.println("> Used " + item.name + ". Temporary damage increased by " + item.value + "!");
+                // --- UPGRADE --- Make buff last 3 rounds instead of just the current stage
+                applyStatus("attack_buff", 3);
+                System.out.println("> Used " + item.name + ". Temporary damage increased by " + item.value + " for 3 rounds!");
                 break;
         }
         return true;
@@ -175,6 +177,11 @@ public class Player {
 
     public int rollInitiative() { 
         int roll = 1 + new Random().nextInt(this.initiativeRange);
+        // --- UPGRADE --- Archer passive: higher chance to act first.
+        if (this.playerClass.equals("archer")) {
+            System.out.println("> Archer's Swiftness grants an initiative bonus!");
+            roll += 3; 
+        }
         if (hasStatus("Slow")) {
             System.out.println("> " + name + " is slowed, rolling with disadvantage.");
             roll = Math.min(roll, 1 + new Random().nextInt(this.initiativeRange));
@@ -225,9 +232,23 @@ public class Player {
     }
     
     public void tickStatusEffects() {
-        if(playerClass.equals("archer")){
-            gainFocus(15);
+        // --- UPGRADE --- Add class-specific passive resource generation.
+        switch(playerClass) {
+            case "archer":
+                gainFocus(15);
+                System.out.println("> Passively recovered 15 Focus.");
+                break;
+            case "wizard":
+                int manaRegen = (int) (this.maxMp * 0.05); // 5% of max MP
+                restoreMp(manaRegen);
+                System.out.println("> Passively recovered " + manaRegen + " MP.");
+                break;
+            case "knight":
+                gainRage(5);
+                System.out.println("> Passively generated 5 Rage.");
+                break;
         }
+
 
         List<String> expired = new ArrayList<>();
         for (Map.Entry<String, Integer> entry : statusEffects.entrySet()) {
@@ -240,6 +261,13 @@ public class Player {
                     int dotDamage = (int)(this.maxHealth * 0.05);
                     this.healthPoints = Math.max(0, this.healthPoints - dotDamage);
                     System.out.println("> " + name + " takes " + dotDamage + " damage from " + status + ".");
+                    break;
+                // --- UPGRADE --- Handle the new temporary attack buff duration
+                case "attack_buff":
+                     if (duration - 1 <= 0) {
+                        System.out.println("> Your temporary attack buff has worn off.");
+                        resetTemporaryBuffs();
+                    }
                     break;
             }
 
@@ -275,6 +303,7 @@ public class Player {
     public void addCurrency(double amount) { this.currency += amount; }
     public void addExperience(double amount) { this.experience += amount; }
     public void addItemToInventory(Shop.ShopItem item) { inventory.add(item); }
+    // --- UPGRADE --- Modified to only reset temporary damage buff; status effects have their own duration.
     public void resetTemporaryBuffs() { this.temporaryDamageBuff = 0; }
 
     // --- Getters ---

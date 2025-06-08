@@ -6,11 +6,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 public class Client {
 
     private static final int FINAL_WORLD = 3; 
+    // --- UPGRADE --- Added a Random instance for randomized encounters
+    private static final Random random = new Random();
 
     public static void main(String[] args) {
         AbilityFactory.loadAbilities("abilities.csv");
@@ -84,6 +88,8 @@ public class Client {
                 ArrayList<Enemy> bossEncounter = new ArrayList<>();
                 bossEncounter.add(boss);
 
+                // --- UPGRADE --- Reset temporary buffs before boss fight
+                player1.resetTemporaryBuffs();
                 Combat.combatSequenceInit(player1, bossEncounter, scanner);
 
                 if (player1.getHealthPoints() <= 0) {
@@ -115,8 +121,14 @@ public class Client {
                 delay(2000);
                 System.out.println("\nThe enemies have grown stronger!");
             }
-
+            
+            // --- UPGRADE --- Use new randomized enemy generation method
             ArrayList<Enemy> stageEnemies = generateStageEnemies(allEnemies, stageNumber, worldNumber);
+            if (stageEnemies.isEmpty()) {
+                System.err.println("Could not generate enemies for this stage. Skipping.");
+                stageNumber++;
+                continue;
+            }
             
             System.out.println("\n----------------- Stage " + worldNumber + "-" + stageNumber + " -----------------");
             System.out.println("Enemies this stage:");
@@ -124,6 +136,8 @@ public class Client {
                 System.out.println("- " + e.getName() + " (HP: " + e.getHealthPoints() + ", Armour: " + e.getArmour() + ")");
             }
 
+            // --- UPGRADE --- Reset temporary buffs before each stage
+            player1.resetTemporaryBuffs();
             handlePreCombatActions(player1, scanner);
 
             if (player1.isAutoMode()) {
@@ -151,7 +165,6 @@ public class Client {
             System.out.printf("Current HP: %d/%d\n", player1.getHealthPoints(), player1.getMaxHealth());
             
             System.out.printf("\n> Stage %d cleared!\n", stageNumber);
-            player1.resetTemporaryBuffs();
             
             stageNumber++;
         }
@@ -159,7 +172,8 @@ public class Client {
     
     private static void handleTownHub(Player player, Scanner scanner, int worldNumber) {
         System.out.println("\n--- You arrive at a small, fortified outpost. ---");
-        int healerCost = 15 * worldNumber;
+        // --- UPGRADE --- Reduced healer cost scaling to be more affordable
+        int healerCost = 10 * worldNumber;
 
         while(true){
             System.out.println("\nWhat would you like to do?");
@@ -185,7 +199,7 @@ public class Client {
                  if (worldNumber == 1) {
                     System.out.println("\"...the path ahead is guarded by a crude king, but true evil lurks in the shadows beyond...\"");
                  } else if (worldNumber == 2) {
-                    System.out.println("\"...beware the master of the undead... their fall will herald the true dawn...\"");
+                    System.out.println("\"...beware the master of the undead... their fall will herald the true dawn... or your own...\"");
                  }
                  
             } else {
@@ -296,14 +310,25 @@ public class Client {
         }
     }
 
+    // --- UPGRADE --- New randomized enemy generation logic
     private static ArrayList<Enemy> generateStageEnemies(ArrayList<Enemy> allEnemies, int stageNumber, int worldNumber) {
         ArrayList<Enemy> stageEnemies = new ArrayList<>();
-        Enemy template = allEnemies.get((stageNumber - 1) % allEnemies.size());
+        List<Enemy> enemyPool = getEnemyPoolForWorld(allEnemies, worldNumber);
+
+        if (enemyPool.isEmpty()) return stageEnemies; // Return empty list if no enemies for this world
+
+        // Choose a random enemy from the world's pool
+        Enemy template = enemyPool.get(random.nextInt(enemyPool.size()));
+        
+        // Use the same scaling logic as before
         double hpMultiplier = 1.0 + (0.1 * (stageNumber - 1)) + (0.25 * (worldNumber - 1));
         double armourMultiplier = 1.0 + (0.04 * (stageNumber - 1)) + (0.10 * (worldNumber - 1));
         double damageMultiplier = 1.0 + (0.06 * (stageNumber - 1)) + (0.15 * (worldNumber - 1));
+        
         int finalHp = (int) Math.round(template.getMaxHealth() * hpMultiplier);
         int finalArmour = (int) Math.round(template.getArmour() * armourMultiplier);
+        
+        // Clone and scale abilities
         ArrayList<Ability> scaledAbilities = new ArrayList<>();
         ArrayList<Ability> baseAbilities = EnemyAbilityLoader.getAbilitiesForEnemy(template.getName());
         for (Ability baseAbility : baseAbilities) {
@@ -311,15 +336,53 @@ public class Client {
             newAbility.applyDamageMultiplier(damageMultiplier);
             scaledAbilities.add(newAbility);
         }
+        
         stageEnemies.add(new Enemy(template.getName(), finalHp, finalArmour, template.getInitiative(), template.getCurrencyDrop(), template.getExperienceDrop(), scaledAbilities, template.getAiType()));
+        
+        // Add a second enemy on harder difficulties or later stages
         Difficulty diff = DifficultyManager.getDifficulty();
-        if ((diff == Difficulty.HARD || diff == Difficulty.IMPOSSIBLE) && stageNumber > 2) {
-             ArrayList<Ability> secondEnemyAbilities = new ArrayList<>();
-             for(Ability a : scaledAbilities) secondEnemyAbilities.add(AbilityFactory.createAbility(a.getAbilityName()));
-            stageEnemies.add(new Enemy(template.getName(), finalHp, finalArmour, template.getInitiative(), template.getCurrencyDrop(), template.getExperienceDrop(), secondEnemyAbilities, template.getAiType()));
+        boolean addSecondEnemy = (diff == Difficulty.HARD || diff == Difficulty.IMPOSSIBLE) && stageNumber > 2;
+        if (!addSecondEnemy && stageNumber > 4) { // Also add a second enemy on later stages in normal difficulty
+            addSecondEnemy = random.nextBoolean();
         }
+
+        if (addSecondEnemy) {
+            // Create a distinct second enemy
+            Enemy secondTemplate = enemyPool.get(random.nextInt(enemyPool.size()));
+            int secondHp = (int) Math.round(secondTemplate.getMaxHealth() * hpMultiplier);
+            int secondArmour = (int) Math.round(secondTemplate.getArmour() * armourMultiplier);
+            ArrayList<Ability> secondEnemyAbilities = new ArrayList<>();
+            ArrayList<Ability> secondBaseAbilities = EnemyAbilityLoader.getAbilitiesForEnemy(secondTemplate.getName());
+            for (Ability a : secondBaseAbilities) {
+                Ability newAbility = AbilityFactory.createAbility(a.getAbilityName());
+                newAbility.applyDamageMultiplier(damageMultiplier);
+                secondEnemyAbilities.add(newAbility);
+            }
+            stageEnemies.add(new Enemy(secondTemplate.getName(), secondHp, secondArmour, secondTemplate.getInitiative(), secondTemplate.getCurrencyDrop(), secondTemplate.getExperienceDrop(), secondEnemyAbilities, secondTemplate.getAiType()));
+        }
+
         return stageEnemies;
     }
+
+    // --- UPGRADE --- Helper method to define enemy pools for each world
+    private static List<Enemy> getEnemyPoolForWorld(List<Enemy> allEnemies, int worldNumber) {
+        List<String> world1Enemies = List.of("Goblin", "Thief", "Cave Bat", "Orc Brute", "Skeleton Archer", "Poisonous Frog");
+        List<String> world2Enemies = List.of("Hobgoblin", "Bandit Leader", "Skeleton Knight", "Shadow Mage", "Fire Elemental", "Vampire Bat");
+        List<String> world3Enemies = List.of("Orc Warchief", "Ice Golem", "Stone Guardian", "Shadow Assassin", "Lava Beast", "Storm Eagle");
+
+        List<String> targetNames;
+        switch (worldNumber) {
+            case 1: targetNames = world1Enemies; break;
+            case 2: targetNames = world2Enemies; break;
+            case 3: targetNames = world3Enemies; break;
+            default: targetNames = world1Enemies; // Failsafe
+        }
+        
+        return allEnemies.stream()
+                         .filter(e -> targetNames.contains(e.getName()))
+                         .collect(Collectors.toList());
+    }
+
 
     private static void handlePostCombatRewards(Player player, Enemy enemy, int stageNumber, int worldNumber) {
         double levelDifference = player.getLevelsGained() - (stageNumber + (worldNumber - 1) * 7);
@@ -347,7 +410,7 @@ public class Client {
                 int choice = getSafeIntInput(scanner, "Enter your choice [1-2]: ", 1, 2);
                 if (choice == 1) {
                     learnNewAbility(player, newAbilities, scanner);
-                    continue;
+                    continue; // Check if another level-up is possible
                 }
             }
             upgradeExistingAbility(player, scanner);
