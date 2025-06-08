@@ -10,9 +10,14 @@ public class AutoBattle {
 
     /**
      * Runs an entire combat encounter automatically.
+     * This now needs to be updated to handle multiple enemies correctly.
      */
     public static void runStage(Player player, ArrayList<Enemy> enemies) {
         System.out.println("\n--- AUTO-BATTLE INITIATED ---");
+        
+        // This method now correctly handles a list of enemies, but for auto-battle,
+        // we'll keep the logic of fighting them one by one for simplicity.
+        // A more advanced auto-battle could be a future feature.
         
         for (Enemy currentEnemy : enemies) {
             if (player.getHealthPoints() <= 0) break;
@@ -24,7 +29,7 @@ public class AutoBattle {
             for (Ability a : player.getAbilities()) a.resetCooldown();
             for (Ability a : currentEnemy.getAbilities()) a.resetCooldown();
 
-            // The main combat loop for this enemy.
+            // The main combat loop for this single enemy.
             while (player.getHealthPoints() > 0 && currentEnemy.getHealthPoints() > 0) {
                 
                 // --- Player's Turn ---
@@ -43,7 +48,8 @@ public class AutoBattle {
                 currentEnemy.tickStatusEffects();
                 if(currentEnemy.getHealthPoints() <= 0) continue;
                 if (!currentEnemy.hasStatus("stun")) {
-                    performEnemyTurn(player, currentEnemy);
+                    // Pass the list of all enemies to the AI
+                    performEnemyTurn(player, currentEnemy, enemies);
                 } else {
                     System.out.println("> " + currentEnemy.getName() + " is stunned and cannot act!");
                 }
@@ -96,10 +102,6 @@ public class AutoBattle {
         for (Ability a : player.getAbilities()) a.tickCooldown();
     }
 
-    /**
-     * UPDATED: Improved AI logic to select the most efficient ability.
-     * @return The best Ability to use, or null if none are usable.
-     */
     private static Ability selectBestPlayerAbility(Player player, Enemy enemy) {
         Ability bestAbility = null;
         double bestScore = -1;
@@ -109,14 +111,10 @@ public class AutoBattle {
             if (a.getAbilityName().equals("Mana Dart")) mpCost = 0;
             
             if (a.isReady() && player.getMp() >= mpCost) {
-                // Score is based on average damage.
                 double score = (double)(a.getMinDamage() + a.getMaxDamage()) / 2.0;
-
-                // If the ability is massive overkill, reduce its score to save it.
                 if (a.getMinDamage() > enemy.getHealthPoints()) {
                    score *= 0.5;
                 }
-
                 if (score > bestScore) {
                     bestScore = score;
                     bestAbility = a;
@@ -124,7 +122,6 @@ public class AutoBattle {
             }
         }
         
-        // Fallback to the first available ability if no "best" was found.
         if (bestAbility == null) {
             for (Ability a : player.getAbilities()) {
                  int mpCost = "wizard".equalsIgnoreCase(player.getPlayerClass()) && !a.getAbilityName().equals("Mana Dart") ? a.getMinDamage() : 0;
@@ -136,23 +133,33 @@ public class AutoBattle {
         return bestAbility;
     }
 
-    private static void performEnemyTurn(Player player, Enemy enemy) {
-        Ability chosenEnemyAbility = enemy.chooseBestAbility(player);
+    // UPDATED to pass the full list of enemies to the AI
+    private static void performEnemyTurn(Player player, Enemy enemy, ArrayList<Enemy> allEnemies) {
+        // CORRECTED: Pass the full enemy list to the AI so it can make decisions
+        Ability chosenEnemyAbility = enemy.chooseBestAbility(player, allEnemies);
 
         if (chosenEnemyAbility != null) {
             delay(500);
-            int baseDamage = chosenEnemyAbility.getRandomDamage();
-            double mult = DifficultyManager.getDifficulty().getEnemyDamageMultiplier();
-            int finalDamage = (int) Math.round(baseDamage * mult);
-            
             System.out.println("> " + enemy.getName() + " uses " + chosenEnemyAbility.getAbilityName() + "!");
-            if(finalDamage > 0) {
-                 player.takeDamage(finalDamage);
-                 System.out.println("> Auto-deals " + finalDamage + " damage to " + player.getName() + " (HP left: " + player.getHealthPoints() + ")");
-            }
+            
+            String effect = chosenEnemyAbility.getStatusInflicted();
 
-            if(Math.random() < chosenEnemyAbility.getStatusChance()){
-                player.applyStatus(chosenEnemyAbility.getStatusInflicted(), 3);
+            // Auto-battle doesn't need to simulate the complex healing/buffing logic,
+            // as the AI has already made its choice. We just need to execute a basic attack.
+            // A more advanced auto-battle could simulate this better in the future.
+            if (!effect.equalsIgnoreCase("Heal") && !effect.equalsIgnoreCase("Buff")) {
+                int baseDamage = chosenEnemyAbility.getRandomDamage() + enemy.getTemporaryDamageBuff();
+                double mult = DifficultyManager.getDifficulty().getEnemyDamageMultiplier();
+                int finalDamage = (int) Math.round(baseDamage * mult);
+                
+                if(finalDamage > 0) {
+                     player.takeDamage(finalDamage);
+                     System.out.println("> Auto-deals " + finalDamage + " damage to " + player.getName() + " (HP left: " + player.getHealthPoints() + ")");
+                }
+
+                if(Math.random() < chosenEnemyAbility.getStatusChance()){
+                    player.applyStatus(chosenEnemyAbility.getStatusInflicted(), 3);
+                }
             }
            
             chosenEnemyAbility.use();

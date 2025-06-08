@@ -31,26 +31,6 @@ public class Player {
     private int levelsGained = 0;
     private boolean autoMode = false;
 
-    // A map to hold abilities that can be learned on level-up, specific to each class.
-    private static final Map<String, List<Ability>> LEVEL_UP_POOL = new HashMap<>();
-    static {
-        LEVEL_UP_POOL.put("knight", Arrays.asList(
-            new Ability("Whirlwind", 10, 15, "None", 3),
-            new Ability("Guard Stance", 0, 0, "Guard", 4), // Changed to "Guard" status
-            new Ability("Last Stand", 0, 0, "Invulnerable", 6)
-        ));
-        LEVEL_UP_POOL.put("archer", Arrays.asList(
-            new Ability("Piercing Shot", 8, 12, "Pierce", 2),
-            new Ability("Rapid Fire", 4, 7, "None", 1),
-            new Ability("Called Shot", 25, 30, "Vulnerable", 5)
-        ));
-        LEVEL_UP_POOL.put("wizard", Arrays.asList(
-            new Ability("Meteor Strike", 20, 25, "Burn", 5),
-            new Ability("Mana Shield", 0, 0, "Shield", 4),
-            new Ability("Polymorph", 0, 0, "Stun", 6)
-        ));
-    }
-
     /**
      * UPDATED Constructor for a new Player. Initializes stats from parameters (loaded from CSV).
      */
@@ -67,25 +47,28 @@ public class Player {
         this.initiativeRange = initiative;
         this.maxMp = maxMp;
 
-        // Initialize starting abilities based on the chosen class.
+        // Initialize starting abilities based on the chosen class using the AbilityFactory.
         switch (this.playerClass) {
             case "wizard":
-                abilities.add(new Ability("Fireball", 8, 12, "Burn", 2));
-                abilities.add(new Ability("Ice Lance", 4, 8, "Slow", 1));
-                abilities.add(new Ability("Arcane Blast", 12, 15, "None", 3));
-                abilities.add(new Ability("Mana Dart", 2, 4, "None", 0));
+                abilities.add(AbilityFactory.createAbility("Fireball"));
+                abilities.add(AbilityFactory.createAbility("Ice Lance"));
+                abilities.add(AbilityFactory.createAbility("Arcane Blast"));
+                abilities.add(AbilityFactory.createAbility("Mana Dart"));
                 break;
             case "archer":
-                abilities.add(new Ability("Arrow Shot", 5, 10, "None", 0));
-                abilities.add(new Ability("Poison Arrow", 3, 7, "Poison", 2));
-                abilities.add(new Ability("Volley", 15, 25, "None", 4));
+                abilities.add(AbilityFactory.createAbility("Arrow Shot"));
+                abilities.add(AbilityFactory.createAbility("Poison Arrow"));
+                abilities.add(AbilityFactory.createAbility("Volley"));
                 break;
             case "knight":
-                abilities.add(new Ability("Slash", 6, 10, "None", 0));
-                abilities.add(new Ability("Shield Bash", 4, 8, "Stun", 2));
-                abilities.add(new Ability("Power Strike", 15, 20, "None", 3));
+                abilities.add(AbilityFactory.createAbility("Slash"));
+                abilities.add(AbilityFactory.createAbility("Shield Bash"));
+                abilities.add(AbilityFactory.createAbility("Power Strike"));
                 break;
         }
+        // Remove nulls in case an ability wasn't found in the factory
+        abilities.removeIf(java.util.Objects::isNull);
+
         this.healthPoints = this.maxHealth;
         this.mp = this.maxMp;
     }
@@ -115,13 +98,34 @@ public class Player {
         return this.experience >= THRESHOLD;
     }
 
+    /**
+     * CORRECTED: This single method now correctly returns a list of new abilities from the factory.
+     * The old LEVEL_UP_POOL has been completely removed.
+     */
     public List<Ability> getNewLevelUpAbilities() {
-        List<Ability> potential = LEVEL_UP_POOL.getOrDefault(this.playerClass, List.of());
+        List<String> abilityNames;
+        switch (this.playerClass) {
+            case "knight":
+                abilityNames = Arrays.asList("Whirlwind", "Guard Stance", "Last Stand");
+                break;
+            case "archer":
+                abilityNames = Arrays.asList("Piercing Shot", "Rapid Fire", "Called Shot");
+                break;
+            case "wizard":
+                abilityNames = Arrays.asList("Meteor Strike", "Mana Shield", "Polymorph");
+                break;
+            default:
+                return List.of();
+        }
+
         List<Ability> newOptions = new ArrayList<>();
-        for (Ability a : potential) {
-            boolean known = this.abilities.stream().anyMatch(owned -> owned.getAbilityName().equals(a.getAbilityName()));
-            if (!known) {
-                newOptions.add(a);
+        for (String name : abilityNames) {
+            boolean alreadyKnown = this.abilities.stream().anyMatch(owned -> owned.getAbilityName().equals(name));
+            if (!alreadyKnown) {
+                Ability newAbility = AbilityFactory.createAbility(name);
+                if (newAbility != null) {
+                    newOptions.add(newAbility);
+                }
             }
         }
         return newOptions;

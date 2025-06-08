@@ -5,13 +5,11 @@ public class Stage {
     private final int stageNumber;
     private final ArrayList<Enemy> enemies;
     private final Player player;
-    private int turnCounter;
 
     public Stage(int stageNumber, Player player, ArrayList<Enemy> enemies) {
         this.stageNumber = stageNumber;
         this.player = player;
         this.enemies = enemies;
-        this.turnCounter = 0;
     }
 
     public void startStage() {

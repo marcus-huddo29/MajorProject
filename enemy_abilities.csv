@@ -1,0 +1,24 @@
+enemyName,ability1,ability2,ability3
+Thief,Quick Stab,Poison Shiv
+Goblin,Basic Strike
+Orc Brute,Power Hit,Basic Strike
+Shadow Mage,Shadow Bolt,Weakening Curse
+Skeleton Knight,Slash,Shield Bash
+Bandit Leader,Power Strike,Quick Stab
+Dark Sorcerer,Meteor Strike,Weakening Curse,Shadow Bolt
+Forest Troll,Power Hit
+Cave Bat,Basic Strike
+Fire Elemental,Fireball
+Ice Golem,Power Hit,Shield Bash
+Skeleton Archer,Arrow Shot
+Necromancer,Shadow Bolt,PoisonBite
+Hobgoblin,Basic Strike,Power Hit
+Stone Guardian,Power Hit,Guard Stance
+Shadow Assassin,Quick Stab,Poison Shiv,Piercing Shot
+Poisonous Frog,PoisonBite
+Vampire Bat,Basic Strike
+Lava Beast,Fireball,Power Hit
+Storm Eagle,Whirlwind
+The Goblin King,Power Hit,Whirlwind,Guard Stance
+Goblin Shaman,Lesser Heal,Wand Bonk
+Orc Warchief,Rally,Power Hit
