@@ -1,3 +1,5 @@
+// Client.java
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -6,16 +8,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+/**
+ * The main game client.
+ * UPDATED:
+ * - Implemented a simple Town Hub between worlds.
+ * - Added more narrative flavour text.
+ * - Player setup now reads new stats from CSV.
+ * - Auto-battle is now enabled for multi-enemy stages.
+ */
 public class Client {
 
-    private static final int FINAL_WORLD = 3; // Let's say the game is won after defeating the World 3 boss
+    private static final int FINAL_WORLD = 3; 
 
     public static void main(String[] args) {
-        // Load all game data from CSV files at startup
         AbilityFactory.loadAbilities("abilities.csv");
         EnemyAbilityLoader.loadEnemyAbilities("enemy_abilities.csv");
 
-        // NARRATIVE: Game Introduction
         System.out.println("==============================================");
         System.out.println("         A LEGEND IN THE MAKING");
         System.out.println("==============================================");
@@ -39,7 +47,6 @@ public class Client {
                 boolean playerWonGame = gameLoop(player1, scanner);
 
                 if (playerWonGame) {
-                     // NARRATIVE: Victory Outro
                      System.out.println("\n*******************************************");
                      System.out.println("The final boss has been vanquished!");
                      System.out.println("Light returns to the realm, and your name is sung by bards for generations.");
@@ -72,65 +79,47 @@ public class Client {
         }
 
         while (true) {
-            if (stageNumber > 7) {
+            if (stageNumber > 7) { // Boss Fight
                 System.out.println("\n\n!! WARNING: A powerful presence bars your way !!\n");
                 delay(2000);
 
                 Enemy boss = createBossEnemy("The Goblin King", worldNumber);
-                if (boss == null) {
-                    System.err.println("Could not create boss enemy! Continuing without boss fight.");
-                } else {
-                    // NARRATIVE: Boss Intro
-                    System.out.println("The air grows heavy... " + boss.getName() + ", scourge of World " + worldNumber + ", blocks your path!");
-                    ArrayList<Enemy> bossEncounter = new ArrayList<>();
-                    bossEncounter.add(boss);
+                System.out.println("The air grows heavy... " + boss.getName() + ", scourge of World " + worldNumber + ", blocks your path!");
+                ArrayList<Enemy> bossEncounter = new ArrayList<>();
+                bossEncounter.add(boss);
 
-                    Combat.combatSequenceInit(player1, bossEncounter, scanner);
+                Combat.combatSequenceInit(player1, bossEncounter, scanner);
 
-                    if (player1.getHealthPoints() <= 0) {
-                        System.out.println("\n> You have been vanquished by " + boss.getName() + "... Game Over.");
-                        return false;
-                    }
-
-                    System.out.println("\n> VICTORY! You have defeated " + boss.getName() + "!");
-                    double currencyReward = boss.getCurrencyDrop() * worldNumber;
-                    double expReward = boss.getExperienceDrop() * worldNumber;
-                    player1.addCurrency(currencyReward);
-                    player1.addExperience(expReward);
-                    System.out.printf("You gained a massive bonus of %.1f currency and %.1f experience!\n", currencyReward, expReward);
-
-                    // NARRATIVE: Check for Final Victory
-                    if (worldNumber >= FINAL_WORLD) {
-                        return true; // Player wins the game!
-                    }
+                if (player1.getHealthPoints() <= 0) {
+                    System.out.println("\n> You have been vanquished by " + boss.getName() + "... Game Over.");
+                    return false;
                 }
 
+                System.out.println("\n> VICTORY! You have defeated " + boss.getName() + "!");
+                double currencyReward = boss.getCurrencyDrop() * worldNumber;
+                double expReward = boss.getExperienceDrop() * worldNumber;
+                player1.addCurrency(currencyReward);
+                player1.addExperience(expReward);
+                System.out.printf("You gained a massive bonus of %.1f currency and %.1f experience!\n", currencyReward, expReward);
+                
+                if (worldNumber >= FINAL_WORLD) return true; // Game Won!
+
+                // --- Town Hub ---
+                handleTownHub(player1, scanner);
+                
+                // --- New World ---
                 worldNumber++;
                 stageNumber = 1;
                 
-                // NARRATIVE: World Intro
                 System.out.println("\n=================================");
                 System.out.println("      ENTERING WORLD " + worldNumber);
                 System.out.println("=================================");
                 delay(1500);
-                if (worldNumber == 2) {
-                    System.out.println("You venture forth, deeper into the corrupted heartlands...");
-                } else if (worldNumber == 3) {
-                    System.out.println("The darkness is thickest here. The final challenge must be close.");
-                } else {
-                    System.out.println("The journey continues into even more dangerous territory.");
-                }
+                if (worldNumber == 2) System.out.println("You venture forth, deeper into the corrupted heartlands...");
+                else if (worldNumber == 3) System.out.println("The darkness is thickest here. The final challenge must be close.");
+                else System.out.println("The journey continues into even more dangerous territory.");
                 delay(2000);
-
                 System.out.println("\nThe enemies have grown stronger!");
-                System.out.print("Current difficulty is " + DifficultyManager.getDifficulty().name() + ". Change? (easy, normal, hard, impossible, or 'no'): ");
-                String diffChoice = scanner.nextLine().trim().toLowerCase();
-                 switch (diffChoice) {
-                    case "easy": DifficultyManager.setDifficulty(Difficulty.EASY); break;
-                    case "normal": DifficultyManager.setDifficulty(Difficulty.NORMAL); break;
-                    case "hard": DifficultyManager.setDifficulty(Difficulty.HARD); break;
-                    case "impossible": DifficultyManager.setDifficulty(Difficulty.IMPOSSIBLE); break;
-                }
             }
 
             ArrayList<Enemy> stageEnemies = generateStageEnemies(allEnemies, stageNumber, worldNumber);
@@ -144,11 +133,10 @@ public class Client {
             handlePreCombatActions(player1, scanner);
 
             if (player1.isAutoMode()) {
-                System.out.println("Auto-battle for multiple enemies not yet implemented. Switching to manual.");
-                player1.setAutoMode(false); 
+                 AutoBattle.runStage(player1, stageEnemies);
+            } else {
+                Combat.combatSequenceInit(player1, stageEnemies, scanner);
             }
-
-            Combat.combatSequenceInit(player1, stageEnemies, scanner);
 
             if (player1.getHealthPoints() <= 0) {
                 System.out.println("\n> " + player1.getName() + " has been defeated... Game Over.");
@@ -175,10 +163,42 @@ public class Client {
         }
     }
     
+    private static void handleTownHub(Player player, Scanner scanner) {
+        System.out.println("\n--- You arrive at a small, fortified outpost. ---");
+        while(true){
+            System.out.println("\nWhat would you like to do?");
+            System.out.println("1) Visit the Shop");
+            System.out.println("2) Visit the Healer (Fully restore HP/MP for 15 currency)");
+            System.out.println("3) Speak to the Sage");
+            System.out.println("4) Continue your journey");
+
+            int choice = getSafeIntInput(scanner, "Enter your choice: ", 1, 4);
+            if(choice == 1) {
+                Shop.openShop(player, scanner);
+            } else if (choice == 2) {
+                if (player.getCurrency() >= 15) {
+                    player.addCurrency(-15);
+                    player.heal(player.getMaxHealth());
+                    player.restoreMp(player.getMaxMp());
+                    System.out.println("> The Healer's magic soothes your wounds. You are fully restored!");
+                } else {
+                    System.out.println("> You don't have enough currency.");
+                }
+            } else if (choice == 3) {
+                 System.out.println("\nThe Sage looks at you with ancient eyes and whispers...");
+                 System.out.println("\"...beware the one who commands both fire and shadow... their fall will herald the true dawn...\"");
+            } else {
+                System.out.println("\nYou restock your supplies and head back into the wilds.");
+                break;
+            }
+        }
+    }
+
     private static Enemy createBossEnemy(String bossName, int worldNumber) {
+        // This method remains largely the same but is still crucial.
         try (BufferedReader reader = new BufferedReader(new FileReader("enemyStats.csv"))) {
             String line;
-            reader.readLine(); // Skip header
+            reader.readLine(); 
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
                 if (parts[0].trim().equalsIgnoreCase(bossName)) {
@@ -223,7 +243,7 @@ public class Client {
         Player player = loadPlayerFromCSV("playerStats.csv", name, playerClass);
         if (player != null) {
             player.addCurrency(50);
-            System.out.println("\nWelcome, " + name + "! Starting as a " + playerClass + " with HP=" + player.getMaxHealth() + ", Armour=" + player.getArmour() + ", MP=" + player.getMaxMp());
+            System.out.println("\nWelcome, " + name + "! Starting as a " + playerClass + ".");
             System.out.println("You start with 50 currency.");
             delay(500);
             System.out.println("\n--- Your Abilities ---");
@@ -243,7 +263,9 @@ public class Client {
                     int armour = Integer.parseInt(p[3].trim());
                     int init = Integer.parseInt(p[4].trim());
                     int maxMp = Integer.parseInt(p[5].trim());
-                    return new Player(playerName, playerClass, maxHP, armour, init, maxMp);
+                    int maxRage = Integer.parseInt(p[6].trim());
+                    int maxFocus = Integer.parseInt(p[7].trim());
+                    return new Player(playerName, playerClass, maxHP, armour, init, maxMp, maxRage, maxFocus);
                 }
             }
         } catch (IOException | NumberFormatException e) {
@@ -252,6 +274,9 @@ public class Client {
         return null;
     }
 
+    // Other helper methods (handlePreCombatActions, generateStageEnemies, etc.) remain largely the same
+    // but are included here for the code to be complete.
+    
     private static void handlePreCombatActions(Player player, Scanner scanner) {
         while (true) {
             System.out.print("\nChoose action: [start] combat, [auto] combat, [shop], or [use] item: ");
@@ -275,14 +300,17 @@ public class Client {
         ArrayList<Ability> scaledAbilities = new ArrayList<>();
         ArrayList<Ability> baseAbilities = EnemyAbilityLoader.getAbilitiesForEnemy(template.getName());
         for (Ability baseAbility : baseAbilities) {
-            Ability newAbility = new Ability(baseAbility.getAbilityName(), baseAbility.getMinDamage(), baseAbility.getMaxDamage(), baseAbility.getStatusInflicted(), baseAbility.getCooldown(), baseAbility.getTargetType());
+            Ability newAbility = AbilityFactory.createAbility(baseAbility.getAbilityName());
             newAbility.applyDamageMultiplier(damageMultiplier);
             scaledAbilities.add(newAbility);
         }
         stageEnemies.add(new Enemy(template.getName(), finalHp, finalArmour, template.getInitiative(), template.getCurrencyDrop(), template.getExperienceDrop(), scaledAbilities));
         Difficulty diff = DifficultyManager.getDifficulty();
         if ((diff == Difficulty.HARD || diff == Difficulty.IMPOSSIBLE) && stageNumber > 2) {
-            stageEnemies.add(new Enemy(template.getName(), finalHp, finalArmour, template.getInitiative(), template.getCurrencyDrop(), template.getExperienceDrop(), new ArrayList<>(scaledAbilities)));
+            // Create a distinct copy for the second enemy
+             ArrayList<Ability> secondEnemyAbilities = new ArrayList<>();
+             for(Ability a : scaledAbilities) secondEnemyAbilities.add(AbilityFactory.createAbility(a.getAbilityName()));
+            stageEnemies.add(new Enemy(template.getName(), finalHp, finalArmour, template.getInitiative(), template.getCurrencyDrop(), template.getExperienceDrop(), secondEnemyAbilities));
         }
         return stageEnemies;
     }

@@ -8,6 +8,12 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Comparator;
 
+/**
+ * Represents an enemy character.
+ * UPDATED:
+ * - Implemented diminishing returns for status effects.
+ * - Bosses now have innate resistance to stun/polymorph.
+ */
 public class Enemy {
 
     private final String name;
@@ -20,7 +26,8 @@ public class Enemy {
     private final ArrayList<Ability> abilities;
     
     private final Map<String, Integer> statusEffects = new HashMap<>();
-    private int temporaryDamageBuff = 0; // For rally buff
+    private final Map<String, Integer> statusResistance = new HashMap<>();
+    private int temporaryDamageBuff = 0;
 
     public Enemy(String name, int healthPoints, int armour, int initiative,
                  double currencyDrop, double experienceDrop, ArrayList<Ability> abilities) {
@@ -32,6 +39,12 @@ public class Enemy {
         this.currencyDrop = currencyDrop;
         this.experienceDrop = experienceDrop;
         this.abilities = abilities;
+
+        // Bosses get innate resistance
+        if(name.equals("The Goblin King") || name.equals("Dark Sorcerer")){
+            statusResistance.put("stun", 2);
+            statusResistance.put("polymorph", 2);
+        }
     }
 
     public void takeDamage(int amount) {
@@ -53,7 +66,6 @@ public class Enemy {
         return roll;
     }
 
-    // A much smarter AI that can decide to heal or buff allies
     public Ability chooseBestAbility(Player player, List<Enemy> allies) {
         List<Ability> availableAbilities = new ArrayList<>();
         for (Ability a : this.abilities) {
@@ -63,54 +75,39 @@ public class Enemy {
         }
         if (availableAbilities.isEmpty()) return null;
 
-        // --- AI Decision Making ---
-
-        // 1. Healing Logic: If an ally (or self) is below 50% health, consider healing.
         for (Ability ability : availableAbilities) {
             if (ability.getStatusInflicted().equalsIgnoreCase("Heal")) {
-                // Find the most wounded ally (including self)
                 Enemy targetToHeal = allies.stream()
                     .filter(e -> e.getHealthPoints() > 0 && (double)e.getHealthPoints() / e.getMaxHealth() < 0.5)
                     .min(Comparator.comparingInt(Enemy::getHealthPoints))
                     .orElse(null);
                 
-                if (targetToHeal != null) {
-                    return ability; // Decision: Heal the wounded ally!
-                }
+                if (targetToHeal != null) return ability;
             }
         }
 
-        // 2. Buffing Logic: If an ally doesn't have a damage buff, consider buffing.
         for (Ability ability : availableAbilities) {
             if (ability.getStatusInflicted().equalsIgnoreCase("Buff")) {
-                // Find an ally without a damage buff
                 Enemy targetToBuff = allies.stream()
                     .filter(e -> e.getHealthPoints() > 0 && e.temporaryDamageBuff == 0)
                     .findFirst()
                     .orElse(null);
 
-                if (targetToBuff != null) {
-                    return ability; // Decision: Buff an ally!
-                }
+                if (targetToBuff != null) return ability;
             }
         }
 
-        // 3. Attack Logic: If no support action is taken, attack the player.
-        // Prioritize status effects on the player
         for (Ability a : availableAbilities) {
             String status = a.getStatusInflicted();
             if (status != null && !status.equalsIgnoreCase("None") && !status.equalsIgnoreCase("Heal") && !status.equalsIgnoreCase("Buff") && !player.hasStatus(status)) {
-                if (Math.random() < 0.4) {
-                    return a; // Decision: Debuff the player!
-                }
+                if (Math.random() < 0.4) return a;
             }
         }
 
-        // Default to highest damage attack if no other action is chosen
         return availableAbilities.stream()
             .filter(a -> !a.getStatusInflicted().equalsIgnoreCase("Heal") && !a.getStatusInflicted().equalsIgnoreCase("Buff"))
             .max(Comparator.comparingInt(a -> (a.getMinDamage() + a.getMaxDamage()) / 2))
-            .orElse(null); // Return best attack, or null if only support abilities are left
+            .orElse(null);
     }
     
     public static ArrayList<Enemy> generateEnemiesFromCSV(String filename) {
@@ -138,8 +135,18 @@ public class Enemy {
     
     public void applyStatus(String status, int duration) {
         if (status == null || status.equalsIgnoreCase("None")) return;
-        statusEffects.put(status.toLowerCase(), duration);
-        System.out.println("> " + this.name + " is now affected by " + status + " for " + duration + " turns!");
+        
+        int timesApplied = statusResistance.getOrDefault(status.toLowerCase(), 0);
+        int finalDuration = (int) (duration / Math.pow(2, timesApplied));
+
+        if(finalDuration <= 0) {
+            System.out.println("> " + this.name + " resisted the " + status + " effect!");
+            return;
+        }
+
+        statusEffects.put(status.toLowerCase(), finalDuration);
+        statusResistance.put(status.toLowerCase(), timesApplied + 1);
+        System.out.println("> " + this.name + " is now affected by " + status + " for " + finalDuration + " turns!");
     }
 
     public boolean hasStatus(String status) {
@@ -152,7 +159,7 @@ public class Enemy {
             String status = entry.getKey();
             int duration = entry.getValue() - 1;
 
-            if (status.equalsIgnoreCase("buff")) { // Buffs also tick down
+            if (status.equalsIgnoreCase("buff")) {
                 if (duration <= 0) {
                     this.temporaryDamageBuff = 0;
                     System.out.println("> " + name + "'s rally buff has worn off.");
@@ -183,6 +190,7 @@ public class Enemy {
     public void clearAllStatusEffects() {
         statusEffects.clear();
         temporaryDamageBuff = 0;
+        // Don't clear resistance, it should persist for the encounter
     }
 
     public void heal(int amount) {
@@ -191,7 +199,7 @@ public class Enemy {
     
     public void applyBuff(int damageBonus) {
         this.temporaryDamageBuff += damageBonus;
-        applyStatus("Buff", 3); // Buff lasts 3 turns
+        applyStatus("Buff", 3);
     }
 
     // --- Getters ---

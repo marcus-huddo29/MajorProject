@@ -4,6 +4,10 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Creates Ability instances from a CSV file.
+ * UPDATED: Now reads the mpCost from the CSV.
+ */
 public class AbilityFactory {
 
     private static final Map<String, Ability> ABILITY_TEMPLATES = new HashMap<>();
@@ -14,16 +18,17 @@ public class AbilityFactory {
             String line;
             while ((line = br.readLine()) != null) {
                 String[] p = line.split(",");
-                if (p.length < 6) continue; // Now expects 6 columns
+                if (p.length < 7) continue; // Now expects 7 columns
 
                 String name = p[0].trim();
                 int minDmg = Integer.parseInt(p[1].trim());
                 int maxDmg = Integer.parseInt(p[2].trim());
                 String status = p[3].trim();
                 int cooldown = Integer.parseInt(p[4].trim());
-                String targetType = p[5].trim(); // NEW
+                String targetType = p[5].trim();
+                int mpCost = Integer.parseInt(p[6].trim()); // NEW
 
-                ABILITY_TEMPLATES.put(name, new Ability(name, minDmg, maxDmg, status, cooldown, targetType));
+                ABILITY_TEMPLATES.put(name, new Ability(name, minDmg, maxDmg, status, cooldown, targetType, mpCost));
             }
             System.out.println("Successfully loaded " + ABILITY_TEMPLATES.size() + " ability templates.");
         } catch (IOException | NumberFormatException e) {
@@ -38,6 +43,8 @@ public class AbilityFactory {
             return null;
         }
         // Return a new instance with all fields from the template
-        return new Ability(template.getAbilityName(), template.getMinDamage(), template.getMaxDamage(), template.getStatusInflicted(), template.getCooldown(), template.getTargetType());
+        return new Ability(template.getAbilityName(), template.getMinDamage(), template.getMaxDamage(), 
+                           template.getStatusInflicted(), template.getCooldown(), template.getTargetType(),
+                           template.getMpCost());
     }
 }

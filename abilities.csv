@@ -1,29 +1,30 @@
-abilityName,minDamage,maxDamage,statusInflicted,cooldown,targetType
-Fireball,8,12,Burn,2,Single
-Slash,6,10,None,0,Single
-PoisonBite,4,8,Poison,1,Single
-Wand Bonk,1,3,None,0,Single
-Ice Lance,4,8,Slow,1,Single
-Arcane Blast,12,15,None,3,Single
-Mana Dart,2,4,None,0,Single
-Arrow Shot,5,10,None,0,Single
-Poison Arrow,3,7,Poison,2,Single
-Volley,15,25,None,4,All
-Power Strike,15,20,None,3,Single
-Whirlwind,10,15,None,3,All
-Guard Stance,0,0,Guard,4,Single
-Last Stand,0,0,Invulnerable,6,Single
-Piercing Shot,8,12,Pierce,2,Single
-Rapid Fire,4,7,None,1,Single
-Called Shot,25,30,Vulnerable,5,Single
-Meteor Strike,20,25,Burn,5,All
-Mana Shield,0,0,Shield,4,Single
-Polymorph,0,0,Stun,6,Single
-Shadow Bolt,4,8,None,1,Single
-Weakening Curse,2,4,Vulnerable,3,Single
-Quick Stab,3,6,None,0,Single
-Poison Shiv,2,4,Poison,2,Single
-Basic Strike,3,7,None,1,Single
-Power Hit,5,10,None,2,Single
-Lesser Heal,0,5,Heal,3,Single
-Rally,0,3,Buff,4,Single
+abilityName,minDamage,maxDamage,statusInflicted,cooldown,targetType,mpCost
+Fireball,8,12,Burn,2,Single,15
+Slash,6,10,None,0,Single,0
+PoisonBite,4,8,Poison,1,Single,0
+Wand Bonk,1,3,None,0,Single,5
+Ice Lance,4,8,Slow,1,Single,10
+Arcane Blast,12,15,None,3,Single,25
+Mana Dart,2,4,None,0,Single,0
+Arrow Shot,5,10,None,0,Single,0
+Poison Arrow,3,7,Poison,2,Single,15
+Volley,15,25,None,4,All,40
+Power Strike,15,20,None,3,Single,25
+Whirlwind,10,15,None,3,All,35
+Guard Stance,0,0,Guard,4,Single,20
+Last Stand,0,0,Invulnerable,6,Single,50
+Piercing Shot,8,12,Pierce,2,Single,15
+Rapid Fire,4,7,None,1,Single,10
+Called Shot,25,30,Vulnerable,5,Single,40
+Meteor Strike,20,25,Burn,5,All,50
+Mana Shield,0,0,Shield,4,Single,30
+Polymorph,0,0,Stun,6,Single,60
+Shadow Bolt,4,8,None,1,Single,8
+Weakening Curse,2,4,Vulnerable,3,Single,12
+Quick Stab,3,6,None,0,Single,0
+Poison Shiv,2,4,Poison,2,Single,0
+Basic Strike,3,7,None,1,Single,0
+Power Hit,5,10,None,2,Single,0
+Lesser Heal,0,5,Heal,3,Single,10
+Rally,0,3,Buff,4,Single,0
+Shield Bash,5,8,Stun,3,Single,20

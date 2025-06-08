@@ -5,6 +5,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+/**
+ * Represents the player character.
+ * UPDATED:
+ * - Added Rage (Knight) and Focus (Archer) resources.
+ * - Implemented diminishing returns for status effects.
+ * - Methods to manage new resources.
+ */
 public class Player {
 
     private final String name;
@@ -13,64 +20,73 @@ public class Player {
     private int maxHealth;
     private int armour;
     private int initiativeRange;
+    
     private int mp;
     private int maxMp;
+    private int rage;
+    private int maxRage;
+    private int focus;
+    private int maxFocus;
+
     private double currency;
     private double experience;
     
-    private int permanentDamageBonus; // From weapons
-    private int temporaryDamageBuff;  // From consumables
+    private int permanentDamageBonus;
+    private int temporaryDamageBuff;
 
     private final ArrayList<Ability> abilities;
     private final List<Shop.ShopItem> inventory = new ArrayList<>();
     private final List<String> ownedWeapons = new ArrayList<>();
     
-    // --- NEW: Status Effect Handling ---
-    private final Map<String, Integer> statusEffects = new HashMap<>(); // Key: status name, Value: duration
+    private final Map<String, Integer> statusEffects = new HashMap<>();
+    private final Map<String, Integer> statusResistance = new HashMap<>();
 
     private int levelsGained = 0;
     private boolean autoMode = false;
 
-    /**
-     * UPDATED Constructor for a new Player. Initializes stats from parameters (loaded from CSV).
-     */
-    public Player(String name, String playerClass, int maxHealth, int armour, int initiative, int maxMp) {
+    public Player(String name, String playerClass, int maxHealth, int armour, int initiative, int maxMp, int maxRage, int maxFocus) {
         this.name = name;
         this.playerClass = playerClass.toLowerCase();
         this.abilities = new ArrayList<>();
         this.permanentDamageBonus = 0;
         this.temporaryDamageBuff = 0;
         
-        // Stats are now passed in directly from Client.java after being read from CSV.
         this.maxHealth = maxHealth;
         this.armour = armour;
         this.initiativeRange = initiative;
         this.maxMp = maxMp;
+        this.maxRage = maxRage;
+        this.maxFocus = maxFocus;
 
-        // Initialize starting abilities based on the chosen class using the AbilityFactory.
         switch (this.playerClass) {
             case "wizard":
                 abilities.add(AbilityFactory.createAbility("Fireball"));
                 abilities.add(AbilityFactory.createAbility("Ice Lance"));
-                abilities.add(AbilityFactory.createAbility("Arcane Blast"));
                 abilities.add(AbilityFactory.createAbility("Mana Dart"));
                 break;
             case "archer":
                 abilities.add(AbilityFactory.createAbility("Arrow Shot"));
                 abilities.add(AbilityFactory.createAbility("Poison Arrow"));
-                abilities.add(AbilityFactory.createAbility("Volley"));
                 break;
             case "knight":
                 abilities.add(AbilityFactory.createAbility("Slash"));
-                abilities.add(AbilityFactory.createAbility("Shield Bash"));
                 abilities.add(AbilityFactory.createAbility("Power Strike"));
+                abilities.add(AbilityFactory.createAbility("Shield Bash"));
                 break;
         }
-        // Remove nulls in case an ability wasn't found in the factory
         abilities.removeIf(java.util.Objects::isNull);
 
         this.healthPoints = this.maxHealth;
         this.mp = this.maxMp;
+        this.rage = 0;
+        this.focus = 50; // Archers start with some focus
+    }
+
+    public void dealDamage(int damage, Enemy target){
+        if (this.playerClass.equals("knight")){
+            gainRage(damage / 2);
+        }
+        target.takeDamage(damage);
     }
     
     public void performLevelUp() {
@@ -98,10 +114,6 @@ public class Player {
         return this.experience >= THRESHOLD;
     }
 
-    /**
-     * CORRECTED: This single method now correctly returns a list of new abilities from the factory.
-     * The old LEVEL_UP_POOL has been completely removed.
-     */
     public List<Ability> getNewLevelUpAbilities() {
         List<String> abilityNames;
         switch (this.playerClass) {
@@ -109,10 +121,10 @@ public class Player {
                 abilityNames = Arrays.asList("Whirlwind", "Guard Stance", "Last Stand");
                 break;
             case "archer":
-                abilityNames = Arrays.asList("Piercing Shot", "Rapid Fire", "Called Shot");
+                abilityNames = Arrays.asList("Piercing Shot", "Rapid Fire", "Called Shot", "Volley");
                 break;
             case "wizard":
-                abilityNames = Arrays.asList("Meteor Strike", "Mana Shield", "Polymorph");
+                abilityNames = Arrays.asList("Meteor Strike", "Mana Shield", "Polymorph", "Arcane Blast");
                 break;
             default:
                 return List.of();
@@ -186,14 +198,26 @@ public class Player {
             modifiedArmour /= 2;
         }
         int actual = Math.max(1, amount - modifiedArmour);
+        if(this.playerClass.equals("knight")){
+            gainRage(actual);
+        }
         this.healthPoints = Math.max(0, this.healthPoints - actual);
     }
     
-    // --- NEW: Status Effect Methods ---
     public void applyStatus(String status, int duration) {
         if (status == null || status.equalsIgnoreCase("None")) return;
-        statusEffects.put(status.toLowerCase(), duration);
-        System.out.println("> " + this.name + " is now affected by " + status + " for " + duration + " turns!");
+
+        int timesApplied = statusResistance.getOrDefault(status.toLowerCase(), 0);
+        int finalDuration = (int) (duration / Math.pow(2, timesApplied));
+
+        if(finalDuration <= 0) {
+            System.out.println("> " + this.name + " resisted the " + status + " effect!");
+            return;
+        }
+
+        statusEffects.put(status.toLowerCase(), finalDuration);
+        statusResistance.put(status.toLowerCase(), timesApplied + 1);
+        System.out.println("> " + this.name + " is now affected by " + status + " for " + finalDuration + " turns!");
     }
 
     public boolean hasStatus(String status) {
@@ -201,22 +225,24 @@ public class Player {
     }
     
     public void tickStatusEffects() {
+        if(playerClass.equals("archer")){
+            gainFocus(15); // Archers passively gain focus
+        }
+
         List<String> expired = new ArrayList<>();
         for (Map.Entry<String, Integer> entry : statusEffects.entrySet()) {
             String status = entry.getKey();
             int duration = entry.getValue();
             
-            // Handle per-turn effects
             switch (status) {
                 case "poison":
                 case "burn":
-                    int dotDamage = (int)(this.maxHealth * 0.05); // 5% max HP per turn
+                    int dotDamage = (int)(this.maxHealth * 0.05);
                     this.healthPoints = Math.max(0, this.healthPoints - dotDamage);
                     System.out.println("> " + name + " takes " + dotDamage + " damage from " + status + ".");
                     break;
             }
 
-            // Decrement duration
             if (duration - 1 <= 0) {
                 expired.add(status);
             } else {
@@ -232,11 +258,23 @@ public class Player {
     
     public void clearAllStatusEffects() {
         statusEffects.clear();
+        statusResistance.clear();
     }
 
     public void heal(int amount) { this.healthPoints = Math.min(this.healthPoints + amount, this.maxHealth); }
     public void restoreMp(int amount) { this.mp = Math.min(this.maxMp, this.mp + amount); }
     public void reduceMp(int amount) { this.mp = Math.max(0, this.mp - amount); }
+    public void gainRage(int amount) {
+        this.rage = Math.min(this.maxRage, this.rage + amount);
+        System.out.println("> " + name + " gains " + amount + " Rage!");
+    }
+    public void spendRage(int amount) { this.rage = Math.max(0, this.rage - amount); }
+    public void gainFocus(int amount) {
+        this.focus = Math.min(this.maxFocus, this.focus + amount);
+        System.out.println("> " + name + " gains " + amount + " Focus!");
+    }
+    public void spendFocus(int amount) { this.focus = Math.max(0, this.focus - amount); }
+
     public void addCurrency(double amount) { this.currency += amount; }
     public void addExperience(double amount) { this.experience += amount; }
     public void addItemToInventory(Shop.ShopItem item) { inventory.add(item); }
@@ -250,6 +288,10 @@ public class Player {
     public int getArmour() { return this.armour; }
     public int getMp() { return this.mp; }
     public int getMaxMp() { return this.maxMp; }
+    public int getRage() { return rage; }
+    public int getMaxRage() { return maxRage; }
+    public int getFocus() { return focus; }
+    public int getMaxFocus() { return maxFocus; }
     public double getCurrency() { return this.currency; }
     public ArrayList<Ability> getAbilities() { return this.abilities; }
     public List<Shop.ShopItem> getInventory() { return inventory; }

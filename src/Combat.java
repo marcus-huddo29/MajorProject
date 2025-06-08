@@ -1,3 +1,5 @@
+// Combat.java
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -5,6 +7,13 @@ import java.util.Scanner;
 import java.util.stream.Collectors;
 import java.util.Comparator;
 
+/**
+ * Manages the entire combat sequence.
+ * UPDATED:
+ * - Handles new class resources (Rage, Focus).
+ * - Displays new resource bars.
+ * - Player's dealDamage method is now used.
+ */
 public class Combat {
 
     public static void combatSequenceInit(Player player, ArrayList<Enemy> enemies, Scanner scanner) {
@@ -64,9 +73,9 @@ public class Combat {
             if (choice == useItemOption) {
                 if (handleItemUsage(player, scanner)) {
                     tickPlayerCooldowns(player);
-                    break;
+                    break; 
                 }
-                continue;
+                continue; 
             }
 
             if (handleAbilityUsage(player, enemies, choice - 1, scanner)) {
@@ -145,25 +154,39 @@ public class Combat {
             .collect(Collectors.toList());
     }
     
-    // =================================================================
-    // THIS METHOD IS NOW UPDATED FOR AOE ABILITIES
-    // =================================================================
     private static boolean handleAbilityUsage(Player player, ArrayList<Enemy> enemies, int abilityIndex, Scanner scanner) {
         Ability chosen = player.getAbilities().get(abilityIndex);
         if (!chosen.isReady()) {
             System.out.println("> That ability is on cooldown for " + chosen.getCurrentCooldown() + " turn(s).");
             return false;
         }
-        int mpCost = "wizard".equalsIgnoreCase(player.getPlayerClass()) ? (int)(chosen.getMinDamage() * 0.8) : 0;
-        if (chosen.getAbilityName().equals("Mana Dart")) mpCost = 0;
-        if (player.getMp() < mpCost) {
-            System.out.println("> Not enough MP (requires " + mpCost + ").");
-            return false;
+
+        // Resource Check
+        String playerClass = player.getPlayerClass();
+        int cost = chosen.getMpCost();
+        switch (playerClass) {
+            case "wizard":
+                if (player.getMp() < cost) {
+                    System.out.println("> Not enough MP (requires " + cost + ").");
+                    return false;
+                }
+                break;
+            case "knight":
+                 if (player.getRage() < cost) {
+                    System.out.println("> Not enough Rage (requires " + cost + ").");
+                    return false;
+                }
+                break;
+            case "archer":
+                 if (player.getFocus() < cost) {
+                    System.out.println("> Not enough Focus (requires " + cost + ").");
+                    return false;
+                }
+                break;
         }
 
-        // --- NEW: Check Target Type ---
+
         if (chosen.getTargetType().equalsIgnoreCase("All")) {
-            // --- AOE Logic ---
             System.out.println("\n> You use " + chosen.getAbilityName() + ", hitting all enemies!");
             delay(500);
             
@@ -173,7 +196,6 @@ public class Combat {
             }
 
         } else {
-            // --- Single Target Logic (existing code) ---
             List<Enemy> livingEnemies = enemies.stream().filter(e -> e.getHealthPoints() > 0).collect(Collectors.toList());
             Enemy target = null;
             if (livingEnemies.size() == 1) {
@@ -192,21 +214,26 @@ public class Combat {
             delay(500);
             applyAbilityEffects(player, chosen, target);
         }
+        
+        // Spend Resource
+        switch (playerClass) {
+            case "wizard": player.reduceMp(cost); break;
+            case "knight": player.spendRage(cost); break;
+            case "archer": player.spendFocus(cost); break;
+        }
 
         chosen.use();
-        player.reduceMp(mpCost);
         delay(500);
         return true;
     }
 
-    // NEW HELPER METHOD to avoid repeating damage calculation code
     private static void applyAbilityEffects(Player player, Ability ability, Enemy target) {
         int baseDamage = ability.getRandomDamage();
         int bonusDamage = player.getPermanentDamageBonus() + player.getTemporaryDamageBuff();
         int totalDamage = (int)((baseDamage + bonusDamage) * DifficultyManager.getDifficulty().getPlayerDamageMultiplier());
 
         if(totalDamage > 0) {
-            target.takeDamage(totalDamage);
+            player.dealDamage(totalDamage, target); // Use player's dealDamage method
             System.out.printf("> Dealt %d damage to %s!%n", totalDamage, target.getName());
             if (target.getHealthPoints() <= 0) {
                 System.out.println("> " + target.getName() + " has been defeated!");
@@ -247,14 +274,18 @@ public class Combat {
         for (int i = 0; i < abilities.size(); i++) {
             Ability a = abilities.get(i);
             String targetStr = a.getTargetType().equalsIgnoreCase("All") ? " (AoE)" : "";
-            String mpCostStr = "";
-            if ("wizard".equalsIgnoreCase(player.getPlayerClass())) {
-                 int mpCost = (int)(a.getMinDamage() * 0.8);
-                 if (a.getAbilityName().equals("Mana Dart")) mpCost = 0;
-                 mpCostStr = " [MP:" + mpCost + "]";
+            
+            String costStr = "";
+            String playerClass = player.getPlayerClass();
+            int cost = a.getMpCost();
+            switch (playerClass) {
+                case "wizard": costStr = " [MP:" + cost + "]"; break;
+                case "knight": costStr = " [Rage:" + cost + "]"; break;
+                case "archer": costStr = " [Focus:" + cost + "]"; break;
             }
+
             String cdStr = a.isReady() ? "" : " [CD:" + a.getCurrentCooldown() + "]";
-            System.out.printf("%d) %-15s (Dmg: %d-%d)%s%s%s\n", i + 1, a.getAbilityName(), a.getMinDamage(), a.getMaxDamage(), targetStr, mpCostStr, cdStr);
+            System.out.printf("%d) %-15s (Dmg: %d-%d)%s%s%s\n", i + 1, a.getAbilityName(), a.getMinDamage(), a.getMaxDamage(), targetStr, costStr, cdStr);
         }
         System.out.println((abilities.size() + 1) + ") Use Item");
         System.out.println("---------------------------------------------");
@@ -265,7 +296,13 @@ public class Combat {
 
     private static void printCombatStatus(Player player, ArrayList<Enemy> enemies) {
         printHealthBar(player.getName(), player.getHealthPoints(), player.getMaxHealth());
-        if (player.getMaxMp() > 0) { printManaBar(player.getName(), player.getMp(), player.getMaxMp()); }
+        
+        switch(player.getPlayerClass()){
+            case "wizard": printResourceBar("MP", player.getMp(), player.getMaxMp(), "\u001B[34m"); break; // Blue
+            case "knight": printResourceBar("Rage", player.getRage(), player.getMaxRage(), "\u001B[31m"); break; // Red
+            case "archer": printResourceBar("Focus", player.getFocus(), player.getMaxFocus(), "\u001B[32m"); break; // Green
+        }
+        
         System.out.println("---------------------------------------------");
         for (Enemy enemy : enemies) {
             if (enemy.getHealthPoints() > 0) {
@@ -275,30 +312,21 @@ public class Combat {
         System.out.println("=============================================");
     }
 
-    public static void printHealthBar(String name, int currentHealth, int maxHealth) {
-        double fraction = Math.max(0, (double) currentHealth / maxHealth);
-        int barLength = 20;
-        int filledBars = (int) (fraction * barLength);
-        StringBuilder bar = new StringBuilder(String.format("%-15s HP [%d/%d] ", name, currentHealth, maxHealth));
-        bar.append("[\u001B[32m");
-        for (int i = 0; i < filledBars; i++) bar.append("█");
-        bar.append("\u001B[31m");
-        for (int i = 0; i < barLength - filledBars; i++) bar.append("-");
-        bar.append("\u001B[0m]");
-        System.out.println(bar.toString());
+    public static void printHealthBar(String name, int current, int max) {
+         printResourceBar(name + " HP", current, max, "\u001B[32m");
     }
 
-    public static void printManaBar(String name, int currentMp, int maxMp) {
-        if (maxMp <= 0) return;
-        double fraction = Math.max(0, (double) currentMp / maxMp);
+    public static void printResourceBar(String name, int current, int max, String colorCode) {
+        if (max <= 0) return;
+        double fraction = Math.max(0, (double) current / max);
         int barLength = 20;
         int filledBars = (int) (fraction * barLength);
-        StringBuilder bar = new StringBuilder(String.format("%-15s MP [%d/%d] ", name, currentMp, maxMp));
-        bar.append("[\u001B[34m");
+        StringBuilder bar = new StringBuilder(String.format("%-15s [%d/%d] ", name, current, max));
+        bar.append("[").append(colorCode);
         for (int i = 0; i < filledBars; i++) bar.append("█");
-        bar.append("\u001B[31m");
+        bar.append("\u001B[0m"); // Reset color
         for (int i = 0; i < barLength - filledBars; i++) bar.append("-");
-        bar.append("\u001B[0m]");
+        bar.append("]");
         System.out.println(bar.toString());
     }
     
@@ -320,12 +348,7 @@ public class Combat {
     }
     
     private static boolean areEnemiesAlive(ArrayList<Enemy> enemies) {
-        for (Enemy e : enemies) {
-            if (e.getHealthPoints() > 0) {
-                return true;
-            }
-        }
-        return false;
+        return enemies.stream().anyMatch(e -> e.getHealthPoints() > 0);
     }
 
     private static void delay(int milliseconds) {
