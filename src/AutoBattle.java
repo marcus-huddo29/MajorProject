@@ -9,129 +9,108 @@ public class AutoBattle {
         } catch (InterruptedException ignored) {}
     }
 
-    /**
-     * Runs a fully automated battle for one stage.
-     * @param player the Player object
-     * @param enemies the list of enemies for this stage
-     */
     public static void runStage(Player player, ArrayList<Enemy> enemies, int stageNumber) {
-        System.out.println("\n========================================");
-        System.out.println("   🚩 Auto-Battle Stage " + stageNumber + " Begins");
-        System.out.println("========================================\n");
-        delay(800);
-        // enable auto-mode on player to suppress interactive prompts
+        // --- MODIFIED: Removed the main header to prevent confusing duplicate output ---
         player.setAutoMode(true);
-        // Show player full stats before the stage
-        System.out.printf("Player Stats – HP: %d/%d", player.getHealthPoints(), player.getMaxHealth());
-        if (player.getMaxMp() > 0) {
-            System.out.printf(" | MP: %d/%d", player.getMp(), player.getMaxMp());
-        }
-        System.out.printf(" | Currency: %.1f | Experience: %.1f%n%n",
-                          player.currency, player.experience);
-        // Reset cooldowns at stage start
-        for (Ability a : player.getAbilities()) {
-            a.resetCooldown();
-        }
+        
+        ArrayList<Enemy> enemiesInStage = new ArrayList<>(enemies);
+        
+        for(int i = 0; i < enemiesInStage.size(); i++) {
+            Enemy currentEnemy = enemiesInStage.get(i);
+            
+            if (player.getHealthPoints() <= 0) {
+                break;
+            }
 
-        // Loop until all enemies are dead or player is dead
-        while (player.getHealthPoints() > 0 
-               && enemies.stream().anyMatch(e -> e.getHealthPoints() > 0)) {
+            // --- MODIFIED: The Client now handles this announcement ---
+            // System.out.printf("--- Beginning Encounter vs %s ---\n", currentEnemy.getName());
+            System.out.printf("Player Stats – HP: %d/%d | MP: %d/%d\n", player.getHealthPoints(), player.getMaxHealth(), player.getMp(), player.getMaxMp());
 
-            // For each alive enemy, handle one player+enemy turn
-            for (Enemy e : new ArrayList<>(enemies)) {
+            for (Ability a : player.getAbilities()) a.resetCooldown();
+            for (Ability a : currentEnemy.getAbilities()) a.resetCooldown();
+
+            while (player.getHealthPoints() > 0 && currentEnemy.getHealthPoints() > 0) {
+                
                 if (player.getHealthPoints() <= 0) break;
-                if (e.getHealthPoints() <= 0) {
-                    // Remove defeated enemy
-                    continue;
-                }
-
-                // — Player Turn —
-                Ability best = null;
+                
+                System.out.println("\n--- Player's Turn ---");
+    
+                Ability bestAbility = null;
                 int bestScore = -1;
+
+                // --- NEW: Smarter AI Logic ---
                 for (Ability a : player.getAbilities()) {
                     int cost = a.getAbilityName().equals("Wand Bonk") ? 0 : a.getMinDamage();
-                    // Allow abilities for classes with no MP (maxMp == 0), or if player has enough MP
                     if (a.isReady() && (player.getMaxMp() == 0 || player.getMp() >= cost)) {
+                        
+                        // Overkill-prevention: don't use a powerful ability on a near-dead enemy
+                        if (a.getMaxDamage() > currentEnemy.getHealthPoints() * 2 && a.getCooldown() > 0) {
+                            continue; // Save this strong cooldown for a tougher fight
+                        }
+
                         int score = a.getMaxDamage() + player.getExtraDamage();
                         if (score > bestScore) {
                             bestScore = score;
-                            best = a;
+                            bestAbility = a;
                         }
                     }
                 }
-                if (best != null) {
-                    delay(500);
-                    System.out.println("\n--- Player Action ---");
-                    delay(500);
-                    System.out.println("Auto: " + player.getName()
-                        + " uses " + best.getAbilityName());
-                    delay(300);
-                    int dmg = best.getRandomDamage() + player.getExtraDamage();
-                    e.takeDamage(dmg);
-                    System.out.println("Auto dealt " + dmg
-                        + " to " + e.getName()
-                        + " (HP left: " + e.getHealthPoints() + ")");
-                    best.use();
-                    // Subtract MP if applicable
-                    if (player.getMaxMp() > 0 && !best.getAbilityName().equals("Wand Bonk")) {
-                        player.reduceMp(best.getMinDamage());
+                // If no 'smart' choice was found, fall back to any available move
+                if (bestAbility == null) {
+                    for (Ability a : player.getAbilities()) {
+                         int cost = a.getAbilityName().equals("Wand Bonk") ? 0 : a.getMinDamage();
+                         if (a.isReady() && (player.getMaxMp() == 0 || player.getMp() >= cost)) {
+                            bestAbility = a;
+                            break;
+                         }
                     }
-                    delay(300);
-                    System.out.println();
-                    delay(300);
                 }
-
-                // Tick all cooldowns
-                for (Ability a : player.getAbilities()) {
-                    a.tickCooldown();
-                }
-
-                // Remove defeated enemy
-                if (e.getHealthPoints() <= 0) {
+    
+                if (bestAbility != null) {
                     delay(300);
-                    // System.out.println("Auto: " + e.getName() + " defeated!"); // redundant, summary is printed later
-                    enemies.remove(e);
+                    System.out.println("Auto: " + player.getName() + " uses " + bestAbility.getAbilityName());
                     delay(300);
+                    int dmg = bestAbility.getRandomDamage() + player.getExtraDamage();
+                    currentEnemy.takeDamage(dmg);
+                    System.out.println("Auto dealt " + dmg + " to " + currentEnemy.getName() + " (HP left: " + currentEnemy.getHealthPoints() + ")");
+                    bestAbility.use();
+                    if (player.getMaxMp() > 0 && !bestAbility.getAbilityName().equals("Wand Bonk")) {
+                        player.reduceMp(bestAbility.getMinDamage());
+                    }
+                } else {
+                    System.out.println(player.getName() + " has no abilities ready.");
                 }
-
-                if (player.getHealthPoints() <= 0) break;
-
-                // — Enemy Turn —
-                int attacks = DifficultyManager.getDifficulty().getEnemiesAttackingCount();
-                delay(500);
-                System.out.println("\n--- Enemies Strike ---");
-                for (int i = 0; i < attacks; i++) {
-                    delay(500);
-                    if (e.getHealthPoints() <= 0) break;
-                    int base = 1 + (int)(Math.random() * e.getInitiative());
-                    int dmg = (int)Math.round(
-                        base * DifficultyManager.getDifficulty().getEnemyDamageMultiplier());
-                    player.takeDamage(dmg);
-                    delay(300);
-                    System.out.println(e.getName()
-                        + " auto-deals " + dmg
-                        + " to " + player.getName()
-                        + " (HP left: " + player.getHealthPoints() + ")");
-                    if (player.getHealthPoints() <= 0) break;
+                for (Ability a : player.getAbilities()) a.tickCooldown();
+    
+                if (currentEnemy.getHealthPoints() <= 0) {
+                    continue; 
                 }
-                System.out.println();
-                delay(300);
-
-                if (player.getHealthPoints() <= 0) break;
+    
+                System.out.println("--- Enemies Strike ---");
+                if (player.getHealthPoints() > 0) { 
+                    ArrayList<Ability> enemyAbilities = currentEnemy.getAbilities();
+                    if (!enemyAbilities.isEmpty()) {
+                        Ability chosenEnemyAbility = enemyAbilities.get((int) (Math.random() * enemyAbilities.size()));
+                        if (chosenEnemyAbility.isReady()) {
+                            int baseDamage = chosenEnemyAbility.getRandomDamage();
+                            double mult = DifficultyManager.getDifficulty().getEnemyDamageMultiplier();
+                            int finalDamage = (int) Math.round(baseDamage * mult);
+                            player.takeDamage(finalDamage);
+                            chosenEnemyAbility.use();
+                            System.out.println(currentEnemy.getName() + " uses " + chosenEnemyAbility.getAbilityName() + " and auto-deals " + finalDamage + " to " + player.getName() + " (HP left: " + player.getHealthPoints() + ")");
+                        } else {
+                            System.out.println(currentEnemy.getName() + " tried to use " + chosenEnemyAbility.getAbilityName() + " but it's on cooldown.");
+                        }
+                        for (Ability a : currentEnemy.getAbilities()) a.tickCooldown();
+                    }
+                }
             }
         }
-
-        // Outcome
+        
+        // --- MODIFIED: Removed confusing end-of-battle message ---
         if (player.getHealthPoints() <= 0) {
             System.out.println("Auto: " + player.getName() + " was defeated...");
-            System.out.printf("> Final Currency: %.1f | Final Experience: %.1f%n",
-                              player.currency, player.experience);
-        } else {
-            System.out.println("Auto-Battle cleared stage!");
-            System.out.printf("> Stage %d cleared!%nCurrent Currency: %.1f | Current Experience: %.1f%n",
-                              stageNumber, player.currency, player.experience);
         }
-        // disable auto-mode so subsequent manual play prompts function normally
         player.setAutoMode(false);
     }
 }

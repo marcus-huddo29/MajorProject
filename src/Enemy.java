@@ -14,12 +14,13 @@ public class Enemy {
     public double currencyDrop;
     public double experienceDrop;
     private boolean stunned = false;
+    private final ArrayList<Ability> abilities;
 
     public boolean isStunned() { return stunned; }
     public void setStunned(boolean s) { stunned = s; }
 
     public Enemy(String name, int healthPoints, int armour, int initiative,
-                 int attackDistance, double currencyDrop, double experienceDrop) {
+                 int attackDistance, double currencyDrop, double experienceDrop, ArrayList<Ability> abilities) {
         this.name = name;
         this.healthPoints = healthPoints;
         this.armour = armour;
@@ -27,6 +28,11 @@ public class Enemy {
         this.attackDistance = attackDistance;
         this.currencyDrop = currencyDrop;
         this.experienceDrop = experienceDrop;
+        this.abilities = abilities;
+    }
+    
+    public ArrayList<Ability> getAbilities() {
+        return this.abilities;
     }
 
     public String getName() {
@@ -45,9 +51,16 @@ public class Enemy {
         return this.healthPoints;
     }
 
+    // --- MODIFIED: Enemy now correctly uses its armour stat ---
     public void takeDamage(int amount) {
-        this.healthPoints -= amount;
-        if (this.healthPoints < 0) this.healthPoints = 0;
+        int actualDamage = amount - this.armour;
+        if (actualDamage < 0) {
+            actualDamage = 0; // Prevent healing from attacks
+        }
+        this.healthPoints -= actualDamage;
+        if (this.healthPoints < 0) {
+            this.healthPoints = 0;
+        }
     }
 
     public int getRandomAttackDamage() {
@@ -64,6 +77,10 @@ public class Enemy {
 
     public static ArrayList<Enemy> generateEnemies() {
         ArrayList<Enemy> enemyList = new ArrayList<>();
+        ArrayList<Ability> basicAbilities = new ArrayList<>();
+        basicAbilities.add(new Ability("Basic Strike", 3, 7, 0, "None", 1));
+        basicAbilities.add(new Ability("Power Hit", 5, 10, 0, "None", 2));
+
         try (BufferedReader reader = new BufferedReader(new FileReader("enemyStats.csv"))) {
             String line = reader.readLine(); // skip header
             while ((line = reader.readLine()) != null) {
@@ -75,8 +92,7 @@ public class Enemy {
                 int eDistance = Integer.parseInt(parts[4]);
                 double eCurr = Double.parseDouble(parts[5]);
                 double eExp = Double.parseDouble(parts[6]);
-
-                enemyList.add(new Enemy(eName, eHp, eArmour, eInitiative, eDistance, eCurr, eExp));
+                enemyList.add(new Enemy(eName, eHp, eArmour, eInitiative, eDistance, eCurr, eExp, new ArrayList<>(basicAbilities)));
             }
         } catch (IOException ex) {
             System.err.println("Error loading enemyStats.csv: " + ex.getMessage());

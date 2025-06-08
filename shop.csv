@@ -1,7 +1,7 @@
 itemName,itemType,value,cost,description,classRestriction
 Lesser HP Potion,hp,25,5,Restores 25% of max HP,all
 HP Potion,hp,50,10,Restores 50% of max HP,all
-MP Potion,mp,30,12,Restores 30 MP,wizard  # increased restore amount for better wizard sustain
+MP Potion,mp,50,12,Restores 50% of max MP,wizard  # increased restore amount for better wizard sustain
 Clear Cooldowns,clear_cd,0,15,Resets all ability cooldowns,all
 Attack Buff,attack_buff,2,30,+2 to all ability damage,all
 Knight’s Sword,weapon,3,30,+3 to all ability damage (knight only),knight
